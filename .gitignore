@@ -1,0 +1,29 @@
+# Personal pages and unused assets that do not belong to this site
+watchlist.html
+images.jpg
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local tooling and secrets
+.wrangler/
+.dev.vars
+.env
+.env.*
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local scratch
+*.log
+*.tmp
+*.bak
+dist/

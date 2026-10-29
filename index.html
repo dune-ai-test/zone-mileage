@@ -1,0 +1,3909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mileage Receipt — fuel & distance log</title>
+<meta name="description" content="Turn every fill-up into a thermal-style receipt or a flat editable ledger: distance, litres used, mileage and cost per kilometre, tracked separately for each vehicle.">
+<meta name="theme-color" content="#d6d3ca">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c1a15'/%3E%3Cpath d='M20 13h24v38l-4-3-4 3-4-3-4 3-4-3-4 3z' fill='%23fffdf7'/%3E%3Cpath d='M25 23h14M25 30h14M25 37h9' stroke='%231c1a15' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --ink:#1c1a15;
+  --ink-soft:#3c382f;
+  --muted:#6b6559;
+  --faint:#918a7b;
+  --paper:#fffdf7;
+  --panel:#f7f4ec;
+  --line:#ded7c7;
+  --line-strong:#c9c1af;
+  --accent:#b34524;
+  --accent-ink:#8f3217;
+  --accent-soft:#f2e0d5;
+  --green:#3f5e4a;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;font-family:var(--sans);font-size:15px;line-height:1.5;color:var(--ink);
+  background:
+    radial-gradient(1100px 700px at 12% -12%,#eae7df 0%,transparent 60%),
+    radial-gradient(900px 650px at 96% 0%,#e2ded4 0%,transparent 55%),
+    linear-gradient(165deg,#dad7ce 0%,#c9c6bd 100%);
+  background-attachment:scroll;-webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.32;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E");
+}
+::selection{background:var(--ink);color:var(--paper)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+.page{position:relative;z-index:1;max-width:1152px;margin:0 auto;padding:32px 28px 26px}
+svg{display:block}
+
+/* masthead */
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{display:flex;align-items:center;gap:11px;color:var(--ink)}
+.brand-mark{width:36px;height:36px;border-radius:50%;background:var(--ink);color:#f7f1e3;display:grid;place-items:center;box-shadow:0 4px 12px -6px rgba(28,26,21,.6)}
+.brand-mark svg{width:18px;height:18px}
+.brand-word{font-family:var(--serif);font-size:20px;font-weight:500;letter-spacing:-.01em}
+.brand-word em{font-style:italic;color:var(--accent-ink)}
+.datestamp{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);border:1px solid rgba(28,26,21,.14);background:rgba(255,255,255,.26);border-radius:999px;padding:8px 13px;backdrop-filter:blur(5px);white-space:nowrap}
+.stamp-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(179,69,36,.12);flex:none}
+
+/* intro */
+.intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,330px);gap:44px;align-items:end;margin:36px 0 30px}
+.eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 13px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--accent);opacity:.7;flex:none}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,4.6vw,54px);line-height:1.02;letter-spacing:-.035em;margin:0}
+h1 em{font-style:italic;color:var(--accent-ink);font-weight:400}
+.intro-copy{margin:0 0 4px;font-size:13.5px;line-height:1.7;color:#5b5549;max-width:35ch}
+
+/* layout */
+.workspace{display:grid;grid-template-columns:minmax(0,434px) minmax(0,620px);justify-content:space-between;gap:42px;align-items:start}
+
+/* form panel */
+.panel{
+  background:linear-gradient(180deg,rgba(252,250,245,.97),rgba(246,243,235,.95));
+  border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:24px 24px 20px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 22px 44px -26px rgba(35,31,22,.5),0 2px 6px rgba(35,31,22,.05);
+  backdrop-filter:blur(10px);
+}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.panel-kicker{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:0 0 4px}
+.panel h2{font-family:var(--serif);font-size:27px;line-height:1.1;font-weight:500;letter-spacing:-.015em;margin:0}
+.count-chip{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:var(--accent-ink);background:var(--accent-soft);border:1px solid rgba(179,69,36,.15);padding:5px 10px;border-radius:999px;white-space:nowrap;margin-top:4px}
+.field-group{padding:15px 0 13px;border-bottom:1px solid rgba(222,215,199,.7)}
+.field-group:last-of-type{border-bottom:0;padding-bottom:0}
+.group-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.group-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.group-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,193,175,.7),rgba(201,193,175,0))}
+.group-num{font-family:var(--mono);font-size:8.5px;color:var(--faint)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:600;color:var(--ink-soft);letter-spacing:.01em}
+.field-tag{font-family:var(--mono);font-size:8.5px;font-weight:400;color:var(--faint);letter-spacing:.02em}
+.input-box,.select-box{position:relative;display:flex;align-items:center;background:rgba(255,255,255,.66);border:1px solid var(--line-strong);border-radius:9px;transition:border-color .15s,box-shadow .15s,background .15s;overflow:hidden}
+.input-box:focus-within,.select-box:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,26,21,.08);background:#fffefb}
+.input-box input{border:0;background:transparent;height:42px;width:100%;min-width:0;padding:0 11px;outline:none;font-family:var(--sans);font-size:14px;font-weight:500;letter-spacing:.01em;color:var(--ink)}
+.input-box input::placeholder{color:#aca494;font-weight:400}
+.input-box input[type=date]{font-size:13px;padding:0 10px;min-height:42px;color:var(--ink-soft);color-scheme:light}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.affix{flex:none;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.affix.prefix{padding-left:11px}
+.affix.suffix{padding-right:11px}
+.input-box .prefix+input{padding-left:5px}
+.input-box:has(.suffix) input{padding-right:5px}
+.input-box--sm input{height:36px;font-size:12.5px}
+.select-box select{appearance:none;-webkit-appearance:none;width:100%;height:42px;border:0;outline:none;background:transparent;padding:0 38px 0 11px;font-family:var(--sans);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;text-overflow:ellipsis}
+.select-box>svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted);pointer-events:none}
+.field-help{min-height:14px;margin:0;font-family:var(--mono);font-size:8.5px;line-height:1.5;letter-spacing:.01em;color:var(--faint)}
+.field-help.is-warn{color:var(--accent-ink)}
+.field.has-error .input-box:has([aria-invalid="true"]),.field.has-error .select-box:has([aria-invalid="true"]){border-color:var(--accent);box-shadow:0 0 0 3px rgba(179,69,36,.1)}
+.field.has-error .field-help{color:var(--accent-ink)}
+.vehicle-note{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:8.5px;line-height:1.5;color:var(--faint)}
+.new-vehicle{margin-top:9px;padding:10px;border:1px dashed var(--line-strong);border-radius:10px;background:rgba(255,255,255,.45)}
+.new-vehicle-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.new-vehicle-title{font-size:10.5px;font-weight:600;color:var(--ink-soft)}
+.cancel-link{border:0;background:none;padding:2px 0;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid transparent}
+.cancel-link:hover{color:var(--accent-ink);border-color:rgba(179,69,36,.35)}
+.new-vehicle-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:8px}
+.new-vehicle-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.mini-error{margin:0;font-family:var(--mono);font-size:8.5px;line-height:1.5;color:var(--accent-ink);flex:1}
+.btn{border:0;display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:10px;font-family:var(--sans);font-weight:600;transition:transform .12s,background .15s,color .15s,border-color .15s,box-shadow .15s;text-decoration:none}
+.btn:active{transform:translateY(1px)}
+.btn-sm{height:32px;padding:0 12px;font-size:10.5px;letter-spacing:.02em}
+.btn-soft{background:#f3eee2;border:1px solid var(--line-strong);color:var(--ink-soft);box-shadow:0 1px 0 rgba(255,255,255,.8) inset}
+.btn-soft:hover{background:#fffdf7;border-color:#b2a996;color:var(--ink)}
+.fuel-toggle{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#e9e4d8;border:1px solid rgba(201,193,175,.4);border-radius:10px;padding:4px}
+.fuel-option{position:relative;cursor:pointer}
+.fuel-option input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.fuel-option span{display:flex;align-items:center;justify-content:center;gap:7px;height:33px;border-radius:7px;border:1px solid transparent;font-size:11.5px;font-weight:600;color:var(--muted);transition:background .18s,color .18s,box-shadow .18s,border-color .18s}
+.fuel-option input:checked+span{background:#fffdf7;border-color:rgba(28,26,21,.08);color:var(--ink);box-shadow:0 2px 6px rgba(35,31,22,.12)}
+.fuel-option input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.fuel-dot{width:6px;height:6px;border-radius:50%;background:#c79a45;flex:none}
+.fuel-dot--diesel{background:#81927f}
+.fuel-cost-grid{margin-top:11px}
+.date-field{margin-top:11px;max-width:200px}
+.calc{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0 13px;padding:12px 14px 13px;border-radius:12px;background:radial-gradient(120% 150% at 0% 0%,rgba(255,255,255,.07),transparent 60%),#211f19;color:#f4efe4;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 16px -12px rgba(20,18,13,.8)}
+.calc::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(115deg,transparent 0 10px,rgba(255,255,255,.022) 10px 11px)}
+.calc-item{position:relative;min-width:0;padding:0 12px}
+.calc-item:first-child{padding-left:1px}
+.calc-item+.calc-item{border-left:1px solid rgba(255,255,255,.12)}
+.calc-label{display:block;margin-bottom:4px;font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:#a6a094}
+.calc-value{display:flex;align-items:baseline;gap:3px;min-height:21px;font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calc-value .unit{font-size:8.5px;font-weight:400;letter-spacing:0;color:#a6a094}
+.calc-item--mileage .calc-value{color:#f3b389}
+.form-alert{display:flex;align-items:flex-start;gap:8px;margin:0 0 11px;padding:9px 11px;border:1px solid rgba(179,69,36,.25);border-left:3px solid var(--accent);border-radius:7px;background:#f7e8df;color:var(--accent-ink);font-size:11px;line-height:1.5}
+.form-alert svg{width:14px;height:14px;flex:none;margin-top:1px}
+.form-actions{display:flex;margin-top:2px}
+.btn-primary{flex:1;height:47px;padding:0 16px;background:var(--ink);color:var(--paper);font-size:12.5px;letter-spacing:.02em;box-shadow:0 8px 16px -10px rgba(28,26,21,.7)}
+.btn-primary:hover{background:#2c2820}
+.btn-primary .arrow{display:grid;place-items:center;width:24px;height:24px;margin-left:auto;border-radius:50%;background:rgba(255,255,255,.12);transition:transform .2s}
+.btn-primary:hover .arrow{transform:translateX(2px)}
+.btn-primary .arrow svg{width:12px;height:12px}
+.under-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.local-note{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:.02em;color:var(--faint)}
+.local-note svg{width:10px;height:10px}
+.reset-btn{border:0;background:none;padding:4px 0;font-size:10.5px;color:var(--muted);border-bottom:1px solid transparent}
+.reset-btn:hover{color:var(--ink);border-color:var(--line-strong)}
+
+/* receipt column */
+.receipt-col{min-width:0}
+.receipt-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:0 4px}
+.preview-label{display:flex;align-items:center;gap:8px;min-width:0;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.preview-label #previewLabelText{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(63,94,74,.12);flex:none}
+.bar-actions{display:flex;gap:7px;flex:none}
+.tool-btn{display:inline-flex;align-items:center;gap:6px;height:31px;padding:0 10px;border:1px solid rgba(28,26,21,.14);border-radius:8px;background:rgba(255,255,255,.38);color:#4c473c;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
+.tool-btn:hover{background:rgba(255,255,255,.78);border-color:rgba(28,26,21,.25);color:var(--ink)}
+.tool-btn svg{width:12px;height:12px;opacity:.75}
+.tool-btn:disabled{opacity:.55;cursor:wait}
+.paper-stage{padding:8px 0 10px}
+.paper{position:relative;width:100%;filter:drop-shadow(0 24px 26px rgba(36,32,23,.24)) drop-shadow(0 3px 5px rgba(36,32,23,.09))}
+.tear{height:9px;background:radial-gradient(circle at 50% 100%,var(--paper) 0 7.5px,rgba(255,253,247,0) 8px) 0 0/19px 9px repeat-x}
+.tear--bottom{background:radial-gradient(circle at 50% 0,var(--paper) 0 7.5px,rgba(255,253,247,0) 8px) 0 0/19px 9px repeat-x}
+.receipt{position:relative;overflow:hidden;padding:32px 32px 26px;background:linear-gradient(180deg,#fffefa 0%,var(--paper) 20%,var(--paper) 100%);font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ink)}
+.rcpt-head{text-align:center}
+.rcpt-name{margin:0 0 4px;font-family:var(--mono);font-size:23px;font-weight:600;line-height:1.2;letter-spacing:.18em;white-space:nowrap}
+.rcpt-tagline{margin:0;font-size:8px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint)}
+.rcpt-rule{margin:13px 0;overflow:hidden;white-space:nowrap;text-align:center;user-select:none;font-size:11px;letter-spacing:.3em;color:var(--line-strong)}
+.rcpt-title{margin:0;text-align:center;font-size:11px;font-weight:600;letter-spacing:.34em}
+.rcpt-vehicle{margin:9px 0 0}
+.rcpt-vehicle-name{margin:0;font-size:13px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;line-height:1.35}
+.rcpt-vehicle-reg{margin:2px 0 0;font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.rcpt-meta{display:flex;flex-direction:column;gap:3px;margin:13px 0 16px}
+.rcpt-meta-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;font-size:10px}
+.rcpt-meta-row dt{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.rcpt-meta-row dd{margin:0;text-align:right;font-weight:500;text-transform:uppercase;letter-spacing:.02em}
+.items-head,.entry{display:grid;grid-template-columns:1.12fr .92fr .92fr .7fr .78fr .78fr 1.06fr;column-gap:8px;align-items:baseline}
+.items-head{padding-bottom:6px;border-bottom:1px dashed var(--line-strong);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.items-head span:not(:first-child){text-align:right}
+.entry{position:relative;padding:9px 0;border-bottom:1px dashed var(--line);font-size:9.5px;line-height:1.45}
+.entry:last-child{border-bottom:0}
+.entry--new{animation:entryIn .45s cubic-bezier(.2,.7,.3,1)}
+@keyframes entryIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.entry .cell{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+.entry .cell-date{text-align:left;color:var(--muted);letter-spacing:.015em}
+.entry-mileage{color:var(--accent-ink);font-weight:500}
+.entry .entry-amount{font-size:9.5px;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+.entry-void{position:absolute;right:-20px;top:50%;transform:translateY(-50%);width:15px;height:15px;padding:0;border:0;border-radius:3px;background:transparent;color:var(--faint);font-family:var(--mono);font-size:12px;line-height:1;opacity:0;transition:opacity .15s,background .15s,color .15s}
+.entry:hover .entry-void,.entry-void:focus-visible{opacity:1}
+.entry-void:hover{background:#f3e3d9;color:var(--accent-ink)}
+.rcpt-empty{padding:26px 10px 22px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);text-align:center}
+.rcpt-empty svg{width:25px;height:25px;margin:0 auto 7px;color:var(--line-strong)}
+.rcpt-empty-title{margin:0 0 4px;font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.rcpt-empty p:last-child{margin:0;font-size:8.5px;line-height:1.65;color:var(--faint)}
+.rcpt-summary{margin-top:0}
+.total-row{display:flex;justify-content:space-between;gap:14px;margin-bottom:4px;font-size:10px}
+.total-row .t-key{color:var(--muted)}
+.total-row .t-val{font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+.total-row .accent{color:var(--accent-ink)}
+.grand-total{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:10px;padding-top:11px;border-top:1px dashed var(--line-strong)}
+.g-key{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase}
+.g-val{font-size:26px;font-weight:600;letter-spacing:-.045em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rcpt-footer{text-align:center}
+.thanks{margin:0 0 3px;font-size:10.5px;font-weight:600;letter-spacing:.2em}
+.rcpt-note{margin:0;font-size:7.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.barcode{display:flex;align-items:stretch;justify-content:center;gap:2px;height:34px;width:min(210px,72%);margin:15px auto 5px}
+.barcode span{height:100%;border-radius:.5px;background:var(--ink)}
+.barcode-num{margin:0;text-align:center;font-size:8px;letter-spacing:.2em;color:var(--muted)}
+.receipt-under{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding:0 4px;font-family:var(--mono);font-size:8.5px;letter-spacing:.02em;color:var(--faint)}
+.danger-link{border:0;border-bottom:1px solid transparent;background:none;padding:4px 0;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.danger-link:hover{color:var(--accent-ink);border-color:rgba(179,69,36,.4)}
+.danger-link.is-armed{color:var(--accent);border-color:var(--accent)}
+.page-footer{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:36px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#837d70}
+.foot-dot{opacity:.55}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:24px;z-index:60;display:flex;align-items:center;gap:18px;max-width:calc(100vw - 32px);padding:11px 16px 11px 18px;border-radius:999px;background:#211f19;color:#f5f0e5;font-size:12px;line-height:1.4;box-shadow:0 18px 36px -10px rgba(20,18,13,.45);opacity:0;transform:translate(-50%,10px);pointer-events:none;transition:opacity .2s,transform .2s}
+.toast.is-visible{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;border-bottom:1px solid rgba(240,178,140,.35);background:none;padding:2px 0;color:#f0b28c;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.toast button:hover{border-color:#f0b28c}
+body.is-exporting .entry-void{display:none}
+body.is-exporting .paper-stage{padding:34px 30px 30px;background:#eae7df}
+
+@media (max-width:1150px){
+  .workspace{grid-template-columns:1fr;max-width:640px;margin:0 auto;gap:36px}
+  .receipt-col{max-width:none}
+}
+@media (max-width:940px){
+  .intro{grid-template-columns:1fr;gap:15px}
+  .intro-copy{max-width:54ch}
+}
+@media (max-width:600px){
+  .page{padding:20px 16px 24px}
+  .brand-word{font-size:18px}
+  .brand-mark{width:33px;height:33px}
+  .datestamp{font-size:8px;letter-spacing:.08em;padding:7px 10px}
+  .intro{margin:28px 0 24px}
+  .intro-copy{font-size:13px}
+  h1{font-size:38px}
+  .panel{padding:20px 18px 18px;border-radius:17px}
+  .panel h2{font-size:25px}
+  .receipt{padding:25px 18px 21px}
+  .rcpt-name{font-size:19px}
+  .rcpt-vehicle-name{font-size:12px}
+  .rcpt-rule{letter-spacing:.24em}
+  .items-head{font-size:6.5px;column-gap:5px}
+  .entry{font-size:8.5px;column-gap:5px}
+  .entry .entry-amount{font-size:8.5px}
+  .entry-void{right:-16px}
+  .new-vehicle-grid{grid-template-columns:1fr}
+  .new-vehicle-foot{flex-direction:row}
+  .page-footer{flex-direction:column;gap:4px;text-align:center}
+  .receipt-bar{padding:0 2px}
+  .tool-btn{padding:0 8px}
+}
+@media (max-width:380px){
+  .receipt{padding:22px 14px 20px}
+  .items-head,.entry{grid-template-columns:1.3fr .9fr .9fr .65fr .75fr .75fr 1.3fr;column-gap:3px}
+  .items-head{font-size:6px}
+  .entry,.entry .entry-amount{font-size:7.5px}
+  .entry-void{right:-12px}
+}
+@media (max-width:700px){
+  .input-box input,.select-box select{height:46px;font-size:16px}
+  .input-box input[type=date]{min-height:46px;font-size:16px}
+  .input-box--sm input{height:42px;font-size:16px}
+  .fuel-option span{height:40px;font-size:13px}
+  .btn-primary{height:52px;font-size:14px}
+  .btn-sm{height:40px;font-size:12px}
+  .field-label{font-size:12.5px}
+  .field-tag{font-size:9px}
+  .field-help,.vehicle-note{font-size:9.5px;line-height:1.5}
+  .group-label,.group-num{font-size:9px}
+  .local-note{font-size:9px}
+  .date-field{max-width:none}
+  .new-vehicle-foot{flex-wrap:wrap}
+  .new-vehicle-foot .btn-sm{flex:none}
+  .calc-value{font-size:16px}
+  .calc-label{font-size:8px}
+  .form-alert{font-size:12px}
+  .receipt-under{font-size:9px;flex-wrap:wrap}
+  .danger-link{min-height:40px;padding:10px 2px}
+  .reset-btn{min-height:40px;padding:10px 0}
+}
+@media (max-width:640px){
+  .items-head{display:none}
+  .entry{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:10px;row-gap:8px;align-items:start;padding:13px 0;font-size:11px}
+  .entry .cell{text-align:left;white-space:normal;font-size:12px;line-height:1.35;min-width:0;overflow-wrap:anywhere}
+  .entry .cell[data-label]::before{content:attr(data-label);display:block;margin-bottom:2px;font-size:7.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .entry .cell-date{grid-column:1/-1;padding-right:40px;font-size:12.5px;font-weight:600;color:var(--ink)}
+  .entry .entry-mileage{font-size:12.5px;font-weight:700}
+  .entry .entry-amount{font-size:13px}
+  .entry-void{right:0;top:8px;transform:none;width:36px;height:36px;border:1px solid rgba(28,26,21,.12);border-radius:50%;background:rgba(255,255,255,.55);color:var(--muted);font-size:17px;opacity:.8}
+  .entry:hover .entry-void,.entry-void:focus-visible{opacity:1}
+  .rcpt-meta-row{font-size:10.5px}
+  .rcpt-meta-row dt{font-size:9px}
+  .total-row{font-size:11px}
+  .rcpt-empty{padding:24px 8px 20px}
+  .rcpt-empty-title{font-size:10.5px}
+  .rcpt-empty p:last-child{font-size:10.5px;line-height:1.6}
+}
+@media (max-width:480px){
+  .calc{grid-template-columns:1fr;gap:7px;padding:12px 14px}
+  .calc-item{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0}
+  .calc-item+.calc-item{border-left:0;border-top:1px solid rgba(255,255,255,.12);padding-top:7px}
+  .calc-label{margin:0;font-size:8px}
+  .calc-value{font-size:16px}
+}
+@media (hover:none){
+  .entry-void{opacity:.8}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+@media print{
+  @page{margin:10mm}
+  html,body{background:#fff!important}
+  body::before{display:none}
+  .page{max-width:none;padding:0}
+  .masthead,.intro,.panel,.receipt-bar,.receipt-under,.page-footer,.toast,.entry-void{display:none!important}
+  .workspace{display:block;margin:0;max-width:none}
+  .receipt-col{max-width:none;margin:0}
+  .paper-stage{padding:0}
+  .paper{filter:none;width:80mm;margin:0 auto}
+  .receipt{padding:26px 16px 20px;background:#fffdf7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .items-head,.entry{grid-template-columns:1.25fr .92fr .92fr .68fr .76fr .76fr 1.16fr;column-gap:4px}
+  .items-head{display:grid;font-size:6px}
+  .entry,.entry .entry-amount{font-size:7.5px}
+  .entry .cell[data-label]::before{display:none}
+  .entry{break-inside:avoid}
+  .tear{height:7px;background-size:16px 7px}
+  .tear--bottom{background-size:16px 7px}
+}
+</style>
+<style id="tableStyles" media="not all">
+*,*::before,*::after{box-sizing:border-box}
+.page{max-width:1220px}
+:root{
+  --ink:#1c1a15;
+  --ink-soft:#3c382f;
+  --muted:#6b6559;
+  --faint:#918a7b;
+  --paper:#fffdf7;
+  --panel:#f7f4ec;
+  --line:#ded7c7;
+  --line-strong:#c9c1af;
+  --accent:#b34524;
+  --accent-ink:#8f3217;
+  --accent-soft:#f2e0d5;
+  --green:#3f5e4a;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;font-family:var(--sans);font-size:15px;line-height:1.5;color:var(--ink);
+  background:
+    radial-gradient(1100px 700px at 12% -12%,#eae7df 0%,transparent 60%),
+    radial-gradient(900px 650px at 96% 0%,#e2ded4 0%,transparent 55%),
+    linear-gradient(165deg,#dad7ce 0%,#c9c6bd 100%);
+  background-attachment:scroll;-webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.32;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E");
+}
+::selection{background:var(--ink);color:var(--paper)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+[hidden]{display:none!important}
+svg{display:block}
+.page{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:32px 28px 26px}
+
+/* masthead */
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{display:flex;align-items:center;gap:11px;color:var(--ink);text-decoration:none}
+.brand-mark{width:36px;height:36px;border-radius:50%;background:var(--ink);color:#f7f1e3;display:grid;place-items:center;box-shadow:0 4px 12px -6px rgba(28,26,21,.6)}
+.brand-mark svg{width:18px;height:18px}
+.brand-word{font-family:var(--serif);font-size:20px;font-weight:500;letter-spacing:-.01em}
+.brand-word em{font-style:italic;color:var(--accent-ink)}
+.site-nav{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid rgba(28,26,21,.14);border-radius:999px;background:rgba(255,255,255,.28);backdrop-filter:blur(5px)}
+.site-nav a{padding:7px 13px;border-radius:999px;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;color:var(--muted);transition:background .15s,color .15s}
+.site-nav a:hover{color:var(--ink);background:rgba(255,255,255,.5)}
+.site-nav a[aria-current="page"]{background:var(--ink);color:var(--paper);box-shadow:0 4px 10px -6px rgba(28,26,21,.7)}
+
+/* intro */
+.intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,400px);gap:44px;align-items:end;margin:38px 0 26px}
+.eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 13px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--accent);opacity:.7;flex:none}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,4.6vw,54px);line-height:1.02;letter-spacing:-.035em;margin:0}
+h1 em{font-style:italic;color:var(--accent-ink);font-weight:400}
+.vehicle-card{background:linear-gradient(180deg,rgba(252,250,245,.97),rgba(246,243,235,.95));border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:15px 16px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 18px 36px -28px rgba(35,31,22,.55),0 2px 6px rgba(35,31,22,.05);backdrop-filter:blur(10px)}
+.vehicle-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.vehicle-label{font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.vehicle-chip{font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--accent-ink);background:var(--accent-soft);border:1px solid rgba(179,69,36,.15);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.vehicle-select-row{display:flex;gap:8px;align-items:stretch}
+.select-box{position:relative;display:flex;align-items:center;flex:1;min-width:0;background:rgba(255,255,255,.7);border:1px solid var(--line-strong);border-radius:9px;transition:border-color .15s,box-shadow .15s,background .15s;overflow:hidden}
+.select-box:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,26,21,.08);background:#fffefb}
+.select-box select{appearance:none;-webkit-appearance:none;width:100%;height:40px;border:0;outline:none;background:transparent;padding:0 36px 0 11px;font-size:13px;font-weight:600;cursor:pointer;text-overflow:ellipsis}
+.select-box>svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted);pointer-events:none}
+.vehicle-hint{margin:8px 0 0;font-family:var(--mono);font-size:8.5px;line-height:1.55;color:var(--faint)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;font-family:var(--sans);font-weight:600;transition:transform .12s,background .15s,color .15s,border-color .15s,box-shadow .15s;text-decoration:none;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-soft{height:40px;padding:0 13px;background:#f3eee2;border:1px solid var(--line-strong);color:var(--ink-soft);font-size:11px;box-shadow:0 1px 0 rgba(255,255,255,.8) inset}
+.btn-soft:hover{background:#fffdf7;border-color:#b2a996;color:var(--ink)}
+.btn-primary{height:40px;padding:0 16px;background:var(--ink);color:var(--paper);font-size:11px;letter-spacing:.02em;box-shadow:0 7px 14px -10px rgba(28,26,21,.7)}
+.btn-primary:hover{background:#2c2820}
+.btn-ghost{height:34px;padding:0 12px;border:1px solid rgba(28,26,21,.14);border-radius:8px;background:rgba(255,255,255,.42);color:#4c473c;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase}
+.btn-ghost:hover{background:rgba(255,255,255,.8);border-color:rgba(28,26,21,.25);color:var(--ink)}
+.btn-ghost svg{width:12px;height:12px;opacity:.75}
+.btn-older[aria-expanded="true"]{background:#eef3ec;border-color:rgba(63,94,74,.24);color:var(--green)}
+.btn-older:disabled{opacity:.4;cursor:not-allowed}
+
+/* add vehicle */
+.new-vehicle-panel{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(0,1.45fr);gap:14px 20px;align-items:center;margin:0 0 16px;padding:14px 16px;border:1px dashed var(--line-strong);border-radius:14px;background:rgba(255,255,255,.36);box-shadow:0 12px 26px -24px rgba(35,31,22,.5)}
+.panel-title{margin:0;font-size:12px;font-weight:600;color:var(--ink)}
+.panel-sub{margin:2px 0 0;font-family:var(--mono);font-size:8px;line-height:1.5;color:var(--faint)}
+.panel-fields{display:flex;align-items:stretch;gap:8px;min-width:0}
+.field-box{position:relative;display:flex;align-items:center;flex:1;min-width:0;background:rgba(255,255,255,.72);border:1px solid var(--line-strong);border-radius:8px}
+.field-box:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,26,21,.08);background:#fffefb}
+.field-box input{border:0;background:transparent;width:100%;height:36px;min-width:0;padding:0 10px;outline:none;font-size:12px;font-weight:500}
+.field-box input::placeholder{color:#aca494;font-weight:400}
+.panel-cancel{border:0;background:none;padding:0 4px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.panel-cancel:hover{color:var(--accent-ink)}
+.panel-error{grid-column:1/-1;margin:0;font-family:var(--mono);font-size:8.5px;line-height:1.5;color:var(--accent-ink)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.stat{position:relative;padding:11px 13px 12px;border:1px solid rgba(255,255,255,.7);border-radius:12px;background:linear-gradient(180deg,rgba(252,250,245,.95),rgba(246,243,235,.92));box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 12px 24px -22px rgba(35,31,22,.6);overflow:hidden}
+.stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line);opacity:.5}
+.stat--accent::after{background:var(--accent);opacity:.65}
+.stat-label{display:block;margin-bottom:4px;font-family:var(--mono);font-size:7px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.stat-value{display:flex;align-items:baseline;gap:2px;font-family:var(--mono);font-size:17px;font-weight:500;letter-spacing:-.03em;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.stat-value .unit{font-size:8.5px;font-weight:400;letter-spacing:0;color:var(--muted)}
+.stat--accent .stat-value{color:var(--accent-ink)}
+
+/* ledger */
+.ledger{background:linear-gradient(180deg,rgba(253,251,246,.98),rgba(249,246,238,.97));border:1px solid rgba(255,255,255,.72);border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 24px 50px -34px rgba(35,31,22,.5),0 2px 6px rgba(35,31,22,.05);overflow:hidden}
+.ledger-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:19px 22px 15px;border-bottom:1px solid var(--line)}
+.ledger-kicker{margin:0 0 2px;font-family:var(--mono);font-size:7.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.ledger-head h2{margin:0;font-family:var(--serif);font-size:27px;line-height:1.1;font-weight:500;letter-spacing:-.015em}
+.ledger-meta{margin:4px 0 0;font-family:var(--mono);font-size:8px;line-height:1.5;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.ledger-actions{display:flex;align-items:center;gap:8px;flex:none}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-scroll::-webkit-scrollbar{height:9px}
+.table-scroll::-webkit-scrollbar-track{background:#f1ede2}
+.table-scroll::-webkit-scrollbar-thumb{background:#c9c1af;border-radius:999px;border:2px solid #f1ede2}
+.ledger-table{width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse;font-family:var(--sans)}
+.ledger-table col:nth-child(1){width:132px}
+.ledger-table col:nth-child(2),
+.ledger-table col:nth-child(3){width:104px}
+.ledger-table col:nth-child(4){width:84px}
+.ledger-table col:nth-child(5){width:94px}
+.ledger-table col:nth-child(6){width:100px}
+.ledger-table col:nth-child(7){width:92px}
+.ledger-table col:nth-child(8){width:88px}
+.ledger-table col:nth-child(9){width:96px}
+.ledger-table col:nth-child(10){width:120px}
+.ledger-table col:nth-child(11){width:90px}
+.ledger-table thead th{padding:11px 10px;background:#f5f1e6;border-bottom:1px solid var(--line);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);text-align:left;white-space:nowrap}
+.ledger-table thead th.num{text-align:right}
+.ledger-table thead th.act{text-align:center}
+.ledger-table tbody td{padding:10px;border-bottom:1px solid rgba(222,215,199,.72);background:rgba(255,253,247,.2);font-size:14px;font-weight:500;line-height:1.4;white-space:nowrap;vertical-align:middle;transition:background .12s}
+.ledger-table tbody tr:hover td{background:rgba(255,255,255,.56)}
+.ledger-table td.num{text-align:right;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+.ledger-table td.date-cell{font-size:13px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.ledger-table td.amount{text-align:right;font-size:14px;font-weight:700;letter-spacing:-.015em;color:var(--ink);font-variant-numeric:tabular-nums}
+.ledger-table td.act{text-align:center;white-space:nowrap}
+.ledger-table td.mileage{color:var(--accent-ink);font-weight:700}
+.fuel-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--ink-soft)}
+.fuel-pill i{width:5px;height:5px;border-radius:50%;background:#c79a45;flex:none}
+.fuel-pill--diesel i{background:#81927f}
+.row-actions{display:inline-flex;align-items:center;gap:4px;justify-content:center}
+.icon-btn{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--faint);transition:background .13s,color .13s,border-color .13s}
+.icon-btn:hover{background:#f3e3d9;border-color:rgba(179,69,36,.12);color:var(--accent-ink)}
+.icon-btn svg{width:13px;height:13px}
+.icon-btn--danger:hover{background:#f6ded5;color:var(--accent)}
+.ledger-table .empty-row td{padding:0;background:transparent}
+.ledger-table .empty-row:hover td{background:transparent}
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:26px 20px 24px;text-align:center;color:var(--faint)}
+.empty-state svg{width:24px;height:24px;margin-bottom:7px;color:var(--line-strong)}
+.empty-state strong{font-family:var(--sans);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.empty-state span{margin-top:4px;font-size:12.5px;line-height:1.6}
+
+/* editable cells / inline add */
+.cell-editable{cursor:text}
+.cell-editable:hover{background:rgba(255,255,255,.9)!important;box-shadow:inset 0 0 0 1px rgba(28,26,21,.16)}
+.cell-editable:focus-visible{outline:2px solid var(--ink);outline-offset:-2px;background:rgba(255,255,255,.92)!important}
+.ledger-table tbody td.cell-editing,
+.ledger-table tbody tr:hover td.cell-editing{padding:7px 7px;background:#fffdf7;box-shadow:inset 0 0 0 1px var(--ink)}
+.cell-input.cell-editor{height:34px}
+.cell-input.cell-editor.is-invalid{border-color:var(--accent);box-shadow:0 0 0 2px rgba(179,69,36,.14)}
+.ledger-table .add-row td{padding:8px 7px;background:#fbf3ec;border-top:1px solid rgba(179,69,36,.22);border-bottom:0}
+.ledger-table .add-row:hover td{background:#fbf3ec}
+.ledger-table .older-caption-row td{padding:10px 10px 0;background:#f1f5ef;border-top:1px solid rgba(63,94,74,.24);border-bottom:0;font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}
+.ledger-table .older-caption-row:hover td{background:#f1f5ef}
+.ledger-table .older-row td{padding:8px 7px;background:#f1f5ef;border-top:0;border-bottom:1px solid rgba(63,94,74,.18)}
+.ledger-table .older-row:hover td{background:#f1f5ef}
+.ledger-table .add-row td.draft-display-cell,
+.ledger-table .older-row td.draft-display-cell{padding-left:10px;padding-right:10px}
+.ledger-table .draft-display-cell.is-empty{color:var(--faint);font-weight:500}
+.cell-input{width:100%;height:34px;min-width:0;border:1px solid var(--line-strong);border-radius:6px;background:#fffefb;padding:0 8px;outline:none;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink);transition:border-color .13s,box-shadow .13s}
+.cell-input:focus{border-color:var(--ink);box-shadow:0 0 0 2px rgba(28,26,21,.08)}
+.cell-input::placeholder{color:#b6ae9f;font-weight:500}
+.cell-input.num-input{text-align:right;font-variant-numeric:tabular-nums}
+.cell-input[type=date]{font-size:12px;padding:0 6px}
+.cell-input--fuel{font-family:var(--sans);font-size:13px;font-weight:600;padding:0 6px;cursor:pointer}
+.cell-out{display:block;padding-right:3px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+.add-actions{display:inline-flex;align-items:center;gap:4px}
+.add-btn{height:34px;padding:0 12px;border:0;border-radius:6px;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;transition:background .13s}
+.add-btn:hover{background:#2c2820}
+.add-btn--older{background:var(--green)}
+.add-btn--older:hover{background:#34503d}
+.ledger-table tfoot td{padding:11px 10px;background:#f7f3e8;border-top:1px solid var(--line-strong);font-family:var(--sans);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ledger-table tfoot td.num{text-align:right;font-size:13px}
+.ledger-table tfoot td.amount{text-align:right;font-size:13.5px;color:var(--accent-ink)}
+.ledger-table tfoot td.t-label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.table-note{display:flex;align-items:flex-start;gap:8px;margin:0;padding:12px 22px 15px;font-family:var(--sans);font-size:11.5px;line-height:1.55;color:var(--muted);border-top:1px solid rgba(222,215,199,.55)}
+.table-note svg{width:13px;height:13px;flex:none;margin-top:2px;opacity:.7}
+
+/* footer + toast */
+.page-footer{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:34px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#837d70}
+.foot-dot{opacity:.55}
+.toast{position:fixed;left:50%;bottom:24px;z-index:60;display:flex;align-items:center;gap:18px;max-width:calc(100vw - 32px);padding:11px 16px 11px 18px;border-radius:999px;background:#211f19;color:#f5f0e5;font-size:12px;line-height:1.4;box-shadow:0 18px 36px -10px rgba(20,18,13,.45);opacity:0;transform:translate(-50%,10px);pointer-events:none;transition:opacity .2s,transform .2s}
+.toast.is-visible{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;border-bottom:1px solid rgba(240,178,140,.35);background:none;padding:2px 0;color:#f0b28c;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.toast button:hover{border-color:#f0b28c}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+@media (max-width:1000px){
+  .intro{grid-template-columns:1fr;gap:18px}
+  .vehicle-card{max-width:430px}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:700px){
+  .page{padding:20px 16px 24px}
+  .brand-word{font-size:18px}
+  .brand-mark{width:33px;height:33px}
+  .site-nav a{padding:7px 10px;font-size:8px}
+  .intro{margin:28px 0 22px}
+  h1{font-size:38px}
+  .new-vehicle-panel{grid-template-columns:1fr;gap:10px;padding:13px 14px}
+  .panel-fields{flex-wrap:wrap}
+  .panel-fields .field-box{flex:1 1 160px}
+  .panel-error{grid-column:1}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat{padding:9px 11px 10px}
+  .stat-value{font-size:15px}
+  .ledger-head{align-items:flex-start;padding:16px 16px 13px;gap:12px}
+  .ledger-head h2{font-size:23px}
+  .ledger-actions{flex-direction:column;align-items:flex-end}
+  .ledger-actions .btn-ghost{height:30px;padding:0 9px;font-size:7.5px}
+  .table-note{padding:10px 16px 13px}
+  .page-footer{flex-direction:column;gap:4px;text-align:center}
+}
+@media (max-width:460px){
+  .masthead{align-items:flex-start}
+  .site-nav{flex-direction:column;align-items:stretch;border-radius:12px}
+  .site-nav a{text-align:center;padding:6px 10px}
+  .vehicle-card{max-width:none}
+  .ledger-head{flex-direction:column;align-items:stretch}
+  .ledger-actions{flex-direction:row;align-items:center}
+}
+@media (max-width:860px){
+  .table-scroll{overflow:visible}
+  .ledger-table{display:block;min-width:0;table-layout:auto}
+  .ledger-table colgroup,.ledger-table thead{display:none}
+  .ledger-table tbody,.ledger-table tfoot{display:block}
+  .ledger-table tbody tr{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 10px;padding:12px 13px 10px;background:rgba(255,253,247,.5);border-bottom:1px solid var(--line)}
+  .ledger-table tbody tr:hover{background:rgba(255,255,255,.7)}
+  .ledger-table tbody tr:hover td{background:transparent}
+  .ledger-table tbody td{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;padding:7px 0;border:0;background:transparent;white-space:normal;overflow-wrap:anywhere;text-align:left;font-size:15px;line-height:1.35}
+  .ledger-table tbody td[data-label]::before{content:attr(data-label);font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);line-height:1.2}
+  .ledger-table tbody td.num,.ledger-table tbody td.date-cell,.ledger-table tbody td.amount{text-align:left;font-size:15px}
+  .ledger-table tbody td.amount{font-size:16px}
+  .ledger-table tbody td.cell-editable:hover{background:rgba(255,255,255,.55)!important;box-shadow:none}
+  .ledger-table tbody td.cell-editable:focus-visible{outline:2px solid var(--ink);outline-offset:-2px;background:rgba(255,255,255,.7)!important}
+  .ledger-table tbody td.cell-editing{background:#fffdf7!important;box-shadow:none;outline:1px solid var(--ink);outline-offset:-1px;border-radius:8px;padding:6px}
+  .ledger-table tbody tr:hover td.cell-editing{background:#fffdf7!important;box-shadow:none}
+  .cell-input,.cell-input.cell-editor{height:42px;font-size:16px}
+  .cell-input[type=date],.cell-input--fuel{font-size:16px;padding:0 6px}
+  .cell-out{display:block;font-size:15px;text-align:left;padding:0}
+  .fuel-pill{font-size:14px}
+  .ledger-table tbody tr > td[data-cell="date"],
+  .ledger-table tbody tr > td[data-draft-display="date"],
+  .ledger-table tbody tr > td[data-draft-editor="date"]{order:1;grid-column:1/-1}
+  .ledger-table tbody tr[data-entry-id] > td[data-cell="date"]{padding-right:42px}
+  .ledger-table tbody tr > td[data-cell="start"],
+  .ledger-table tbody tr > td[data-draft-display="start"],
+  .ledger-table tbody tr > td[data-draft-editor="start"]{order:3}
+  .ledger-table tbody tr > td[data-cell="end"],
+  .ledger-table tbody tr > td[data-draft-display="end"],
+  .ledger-table tbody tr > td[data-draft-editor="end"]{order:4}
+  .ledger-table tbody tr > td[data-label="Distance"]{order:5}
+  .ledger-table tbody tr > td[data-cell="fuel"],
+  .ledger-table tbody tr > td[data-draft-display="fuel"],
+  .ledger-table tbody tr > td[data-draft-editor="fuel"]{order:6}
+  .ledger-table tbody tr > td[data-cell="price"],
+  .ledger-table tbody tr > td[data-draft-display="price"],
+  .ledger-table tbody tr > td[data-draft-editor="price"]{order:7}
+  .ledger-table tbody tr > td[data-label="Litres"]{order:8}
+  .ledger-table tbody tr > td[data-label="Mileage"]{order:9}
+  .ledger-table tbody tr > td[data-label="Cost / km"]{order:10}
+  .ledger-table tbody tr > td[data-cell="amount"],
+  .ledger-table tbody tr > td[data-draft-display="amount"],
+  .ledger-table tbody tr > td[data-draft-editor="amount"]{order:11}
+  .ledger-table tbody tr[data-entry-id] > td.act{position:absolute;top:8px;right:8px;order:2;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:transparent!important}
+  .ledger-table tbody tr[data-entry-id] > td.act::before{display:none}
+  .ledger-table tbody tr.add-row,.ledger-table tbody tr.older-row{background:#fbf3ec;border-top:1px solid rgba(179,69,36,.22);border-bottom:1px solid var(--line)}
+  .ledger-table tbody tr.older-row{background:#f1f5ef;border-top-color:rgba(63,94,74,.2);border-bottom-color:rgba(63,94,74,.24)}
+  .ledger-table tbody tr.add-row::before{content:"New fill-up";order:0;grid-column:1/-1;padding-bottom:3px;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink)}
+  .ledger-table tbody tr.older-caption-row{display:block;padding:12px 13px 0;background:#eef3ec;border-top:1px solid rgba(63,94,74,.24);border-bottom:0}
+  .ledger-table tbody tr.older-caption-row:hover{background:#eef3ec}
+  .ledger-table tbody tr.older-caption-row td{display:block;padding:0 0 9px;border:0;background:transparent;font-size:10.5px;line-height:1.4}
+  .ledger-table tbody tr.add-row > td.act,.ledger-table tbody tr.older-row > td.act{grid-column:1/-1;order:20;display:flex;flex-direction:row;align-items:center;justify-content:flex-end;padding:10px 0 0;margin-top:2px;border-top:1px dashed rgba(201,193,175,.7);background:transparent!important}
+  .ledger-table tbody tr.add-row > td.act::before,.ledger-table tbody tr.older-row > td.act::before{display:none}
+  .add-actions{width:100%;justify-content:flex-end;gap:7px}
+  .add-btn{height:42px;padding:0 16px;font-size:12px}
+  .add-row .icon-btn,.older-row .icon-btn{width:42px;height:42px}
+  .icon-btn{width:36px;height:36px}
+  .ledger-table .empty-row{display:block;padding:0;border:0;background:transparent}
+  .ledger-table .empty-row td{display:block;padding:0}
+  .ledger-table tfoot tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px;padding:14px 13px;background:#f7f3e8;border-top:1px solid var(--line-strong)}
+  .ledger-table tfoot td{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0;border:0;background:transparent;white-space:normal;text-align:left;font-size:15px}
+  .ledger-table tfoot td[data-label]::before{content:attr(data-label);font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);line-height:1.2}
+  .ledger-table tfoot td.num,.ledger-table tfoot td.amount{text-align:left;font-size:15px}
+  .ledger-table tfoot td.amount{font-size:16px}
+  .ledger-table tfoot td.t-label{grid-column:1/-1;font-size:10.5px;letter-spacing:.12em}
+  .ledger-table tfoot td:empty{display:none}
+  .ledger{border-radius:16px}
+  .ledger-head{padding:16px 13px 13px}
+  .ledger-head h2{overflow-wrap:anywhere}
+  .ledger-actions{flex-direction:row;align-items:center;gap:8px}
+  .ledger-actions .btn-ghost{height:40px;padding:0 11px;font-size:9.5px}
+  .vehicle-card{max-width:none}
+  .vehicle-label,.vehicle-chip{font-size:8.5px}
+  .vehicle-hint{font-size:9.5px}
+  .stat-label{font-size:8px}
+  .stat-value{font-size:16px}
+  .ledger-kicker,.ledger-meta{font-size:8.5px}
+  .vehicle-select-row .select-box select{height:46px;font-size:16px}
+  .vehicle-select-row .btn-soft{height:46px;padding:0 14px;font-size:12px}
+  .field-box input{height:44px;font-size:16px}
+  .table-note{padding:11px 13px 14px;font-size:11.5px}
+}
+@media (max-width:640px){
+  .ledger-head{flex-direction:column;align-items:stretch}
+  .ledger-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .ledger-actions .btn-ghost{width:100%;height:42px;font-size:10px}
+  .panel-fields{flex-direction:column;align-items:stretch}
+  .panel-fields .field-box{flex:none}
+  .panel-fields .btn-primary{height:44px}
+  .panel-cancel{align-self:flex-start;padding:8px 4px}
+  .ledger-table tbody tr.add-row,.ledger-table tbody tr.older-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:480px){
+  .ledger-table tbody tr[data-entry-id] > td[data-cell="amount"]{grid-column:1/-1;padding-top:9px;margin-top:1px;border-top:1px dashed rgba(201,193,175,.6)}
+  .ledger-table tbody tr[data-entry-id] > td.amount.cell-editable{flex-direction:row;align-items:baseline;justify-content:space-between;gap:12px}
+  .ledger-table tbody tr[data-entry-id] > td[data-cell="amount"]::before{margin-bottom:0}
+}
+@media (max-width:380px){
+  .ledger-table tbody tr[data-entry-id]{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (hover:none){
+  .row-actions .icon-btn{color:var(--muted)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+<style id="sharedStyles">
+/* merged receipt + table views */
+a{color:inherit}
+.masthead-tools{display:flex;align-items:center;gap:10px;flex:none}
+.data-tools{display:flex;align-items:center;gap:6px}
+.cloud-pill{display:inline-flex;align-items:center;gap:6px;height:31px;padding:0 10px;border:1px solid rgba(28,26,21,.14);border-radius:999px;background:rgba(255,255,255,.38);font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;backdrop-filter:blur(5px)}
+.cloud-dot{width:6px;height:6px;border-radius:50%;background:#a49b89;box-shadow:0 0 0 2px rgba(28,26,21,.05);flex:none}
+.cloud-pill[data-state="synced"]{color:#326b48;border-color:rgba(50,107,72,.26);background:rgba(78,143,102,.09)}
+.cloud-pill[data-state="synced"] .cloud-dot{background:#3f8f5e}
+.cloud-pill[data-state="saving"],.cloud-pill[data-state="checking"]{color:#8a6420;border-color:rgba(138,100,32,.26);background:rgba(190,144,47,.09)}
+.cloud-pill[data-state="saving"] .cloud-dot,.cloud-pill[data-state="checking"] .cloud-dot{background:#bd8c2f;animation:cloudPulse 1.2s ease-in-out infinite}
+.cloud-pill[data-state="offline"],.cloud-pill[data-state="local"]{color:#a2472c;border-color:rgba(162,71,44,.26);background:rgba(179,69,36,.08)}
+.cloud-pill[data-state="offline"] .cloud-dot,.cloud-pill[data-state="local"] .cloud-dot{background:#b34524}
+@keyframes cloudPulse{0%,100%{opacity:1}50%{opacity:.25}}
+.site-nav{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid rgba(28,26,21,.14);border-radius:999px;background:rgba(255,255,255,.28);backdrop-filter:blur(5px)}
+.site-nav a{padding:7px 13px;border-radius:999px;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;color:var(--muted);transition:background .15s,color .15s;white-space:nowrap}
+.site-nav a:hover{color:var(--ink);background:rgba(255,255,255,.5)}
+.site-nav a[aria-current="page"]{background:var(--ink);color:var(--paper);box-shadow:0 4px 10px -6px rgba(28,26,21,.7)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+body.view-table .btn-primary{flex:none}
+@media (max-width:700px){
+  .masthead-tools .datestamp{display:none}
+  .site-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 11px;font-size:8.5px}
+  .tool-btn{height:36px;padding:0 10px;font-size:9px}
+  .cloud-pill{height:36px;font-size:9px}
+  button,.site-nav a{touch-action:manipulation}
+  .toast{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));max-width:none;border-radius:14px;padding:12px 14px;transform:translateY(10px)}
+  .toast.is-visible{transform:none}
+}
+@media (max-width:620px){
+  .masthead{flex-wrap:wrap;gap:12px;align-items:center}
+  .masthead-tools{width:100%;justify-content:space-between;gap:8px}
+  .site-nav{flex:1;flex-direction:row;align-items:center;border-radius:999px}
+  .site-nav a{flex:1;text-align:center;padding:0 10px}
+  .data-tools{flex:none}
+  .cloud-pill{height:36px;padding:0 9px;flex:none}
+}
+@media (max-width:380px){
+  .data-tools .tool-btn{width:36px;padding:0;justify-content:center}
+  .data-tools .tool-btn span{display:none}
+  .cloud-pill{width:36px;padding:0;justify-content:center}
+  .cloud-pill #cloudStatusText{display:none}
+  .brand-word{font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="brand" aria-label="Mileage Receipt">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/>
+          <path d="M4 21h11M5 10h9"/>
+          <path d="M14 7h2.5A1.5 1.5 0 0 1 18 8.5V15a1.5 1.5 0 0 0 3 0V9.5L18.5 7"/>
+        </svg>
+      </span>
+      <span class="brand-word">Mileage <em id="brandView">Table</em></span>
+    </div>
+    <div class="masthead-tools">
+      <nav class="site-nav" aria-label="Views">
+        <a href="#receipt" data-view-link="receipt">Receipt</a>
+        <a href="#table" data-view-link="table" aria-current="page">Table</a>
+      </nav>
+      <div class="data-tools" aria-label="Ledger data">
+        <button class="tool-btn" type="button" data-export-json title="Download the ledger as a JSON backup" aria-label="Export ledger as JSON">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+          <span>Export</span>
+        </button>
+        <button class="tool-btn" type="button" data-import-json title="Restore the ledger from a JSON backup" aria-label="Import ledger from JSON">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 19h14"/></svg>
+          <span>Import</span>
+        </button>
+      </div>
+      <div class="cloud-pill" id="cloudStatus" data-state="checking" role="status" aria-live="polite" title="Looking for the D1 ledger.">
+        <span class="cloud-dot" aria-hidden="true"></span>
+        <span id="cloudStatusText">Checking</span>
+      </div>
+      <div class="datestamp"><span class="stamp-dot" aria-hidden="true"></span><span id="todayStamp">—</span></div>
+    </div>
+  </header>
+
+  <div id="receiptView">
+<section class="intro">
+    <div>
+      <p class="eyebrow">Fuel &amp; distance ledger</p>
+      <h1>Every litre,<br><em>accounted for.</em></h1>
+    </div>
+    <p class="intro-copy">Log a fill-up and see the true cost of the road — distance covered, litres used, mileage and cost per kilometre. Each vehicle keeps its own odometer.</p>
+  </section>
+
+<main class="workspace">
+    <section class="panel" aria-labelledby="panelTitle">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">New entry</p>
+          <h2 id="panelTitle">Fill-up details</h2>
+        </div>
+        <span class="count-chip" id="countChip">empty</span>
+      </div>
+
+      <form id="entryForm" novalidate>
+        <div class="field-group">
+          <div class="group-head"><span class="group-label">Vehicle</span><span class="group-rule"></span><span class="group-num">01</span></div>
+          <div class="field" id="vehicleField">
+            <div class="select-box" id="vehiclePick">
+              <select id="vehicleSelect" aria-label="Choose vehicle"></select>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            <div class="new-vehicle" id="newVehicle" hidden>
+              <div class="new-vehicle-head">
+                <span class="new-vehicle-title">Add a vehicle</span>
+                <button type="button" class="cancel-link" id="cancelVehicle" hidden>Cancel</button>
+              </div>
+              <div class="new-vehicle-grid">
+                <div class="input-box input-box--sm">
+                  <input id="newVehicleName" type="text" placeholder="Vehicle name" maxlength="40" autocomplete="off" aria-label="Vehicle name">
+                </div>
+                <div class="input-box input-box--sm">
+                  <input id="newVehicleReg" type="text" placeholder="Reg. no. (optional)" maxlength="20" autocomplete="off" aria-label="Vehicle registration number, optional">
+                </div>
+              </div>
+              <div class="new-vehicle-foot">
+                <p class="mini-error" id="newVehicleError" role="alert" hidden></p>
+                <button type="button" class="btn btn-soft btn-sm" id="addVehicleBtn">Add vehicle</button>
+              </div>
+            </div>
+            <div class="vehicle-note" id="vehicleMeta">Each vehicle keeps its own odometer.</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="group-head"><span class="group-label">Odometer</span><span class="group-rule"></span><span class="group-num">02</span></div>
+          <div class="grid-2">
+            <div class="field">
+              <label class="field-label" for="startKm">Start KM <span class="field-tag">opening</span></label>
+              <div class="input-box">
+                <input id="startKm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 12340" autocomplete="off">
+                <span class="affix suffix">km</span>
+              </div>
+              <p class="field-help" id="startHelp">Choose a vehicle first.</p>
+            </div>
+            <div class="field">
+              <label class="field-label" for="endKm">End KM <span class="field-tag">closing</span></label>
+              <div class="input-box">
+                <input id="endKm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 12412" autocomplete="off">
+                <span class="affix suffix">km</span>
+              </div>
+              <p class="field-help" id="endHelp">Distance is calculated for you.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="group-head"><span class="group-label">Fuel &amp; payment</span><span class="group-rule"></span><span class="group-num">03</span></div>
+          <div class="field">
+            <span class="field-label" id="fuelLabel">Fuel type</span>
+            <div class="fuel-toggle" role="radiogroup" aria-labelledby="fuelLabel">
+              <label class="fuel-option"><input type="radio" name="fuel" value="Petrol" checked><span><i class="fuel-dot" aria-hidden="true"></i>Petrol</span></label>
+              <label class="fuel-option"><input type="radio" name="fuel" value="Diesel"><span><i class="fuel-dot fuel-dot--diesel" aria-hidden="true"></i>Diesel</span></label>
+            </div>
+          </div>
+          <div class="grid-2 fuel-cost-grid">
+            <div class="field">
+              <label class="field-label" for="price">Price / litre</label>
+              <div class="input-box">
+                <span class="affix prefix">₹</span>
+                <input id="price" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" autocomplete="off">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="amount">Total paid</label>
+              <div class="input-box">
+                <span class="affix prefix">₹</span>
+                <input id="amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" autocomplete="off">
+              </div>
+            </div>
+          </div>
+          <div class="field date-field">
+            <label class="field-label" for="entryDate">Date <span class="field-tag">of fill-up</span></label>
+            <div class="input-box">
+              <input id="entryDate" type="date">
+            </div>
+          </div>
+        </div>
+
+        <div class="calc" aria-label="Live mileage calculation">
+          <div class="calc-item">
+            <span class="calc-label">Distance</span>
+            <span class="calc-value"><span id="calcDistance">—</span><span class="unit">km</span></span>
+          </div>
+          <div class="calc-item calc-item--mileage">
+            <span class="calc-label">Mileage</span>
+            <span class="calc-value"><span id="calcMileage">—</span><span class="unit">km/L</span></span>
+          </div>
+          <div class="calc-item">
+            <span class="calc-label">Cost / km</span>
+            <span class="calc-value"><span class="unit">₹</span><span id="calcCost">—</span><span class="unit">/km</span></span>
+          </div>
+        </div>
+
+        <div class="form-alert" id="formError" role="alert" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.1"/></svg>
+          <span id="formErrorText"></span>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">
+            <span>Add to receipt</span>
+            <span class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </button>
+        </div>
+        <div class="under-actions">
+          <span class="local-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span id="persistNote">Saved in this browser</span>
+          </span>
+          <button class="reset-btn" type="button" id="resetFormBtn">Reset form</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="receipt-col" aria-labelledby="previewTitle">
+      <div class="receipt-bar">
+        <div class="preview-label" id="previewTitle"><span class="live-dot" aria-hidden="true"></span><span id="previewLabelText">Receipt preview</span></div>
+        <div class="bar-actions">
+          <a class="tool-btn" href="#table" data-view-link="table" title="Open the table view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/></svg>
+            Table
+          </a>
+          <button class="tool-btn" type="button" id="printBtn" title="Print this receipt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>
+            Print
+          </button>
+          <button class="tool-btn" type="button" id="pngBtn" title="Download this receipt as a PNG">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+            <span>PNG</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="paper-stage" id="paperStage">
+        <div class="paper" id="paper">
+          <div class="tear" aria-hidden="true"></div>
+          <article class="receipt" id="receipt" aria-label="Fuel receipt preview">
+            <header class="rcpt-head">
+              <h2 class="rcpt-name">MILEAGE FINDER</h2>
+              <p class="rcpt-tagline">Fuel &amp; distance ledger</p>
+              <div class="rcpt-rule" aria-hidden="true">* * * * * * * * * * * * * * * * * * * * * * * * *</div>
+              <p class="rcpt-title">FUEL RECEIPT</p>
+              <div class="rcpt-vehicle" id="rcptVehicleBlock" hidden>
+                <p class="rcpt-vehicle-name" id="rcptVehicle">—</p>
+                <p class="rcpt-vehicle-reg" id="rcptVehicleReg"></p>
+              </div>
+              <div class="rcpt-rule" aria-hidden="true">* * * * * * * * * * * * * * * * * * * * * * * * *</div>
+              <dl class="rcpt-meta">
+                <div class="rcpt-meta-row"><dt>Date</dt><dd id="rcptDate">—</dd></div>
+                <div class="rcpt-meta-row"><dt>Time</dt><dd id="rcptTime">—</dd></div>
+                <div class="rcpt-meta-row"><dt>Receipt no.</dt><dd id="rcptNo">—</dd></div>
+                <div class="rcpt-meta-row"><dt>Entries</dt><dd id="rcptEntriesCount">0</dd></div>
+              </dl>
+            </header>
+
+            <section class="rcpt-items">
+              <div class="items-head" id="itemsHead"><span>Date</span><span>Start km</span><span>End km</span><span>Km</span><span>Km/L</span><span>₹/Km</span><span>Amount</span></div>
+              <div id="rcptEntries"></div>
+            </section>
+
+            <section class="rcpt-summary" id="rcptSummary" hidden></section>
+
+            <footer class="rcpt-footer">
+              <div class="rcpt-rule" aria-hidden="true">* * * * * * * * * * * * * * * * * * * * * * * * *</div>
+              <p class="thanks">THANK YOU!</p>
+              <p class="rcpt-note">Drive safe · check tyre pressure</p>
+              <div class="barcode" id="barcode" aria-hidden="true"></div>
+              <p class="barcode-num" id="barcodeNum">—</p>
+            </footer>
+          </article>
+          <div class="tear tear--bottom" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="receipt-under">
+        <span id="savedNote">Saved locally</span>
+        <button class="danger-link" type="button" id="clearReceiptBtn" title="Clear this vehicle's receipt" hidden>Clear receipt</button>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div id="tableView" hidden>
+<section class="intro">
+    <div>
+      <p class="eyebrow">Fuel &amp; distance ledger</p>
+      <h1>Every fill-up,<br><em>laid out flat.</em></h1>
+    </div>
+    <div class="vehicle-card">
+      <div class="vehicle-top">
+        <span class="vehicle-label">Vehicle</span>
+        <span class="vehicle-chip" id="tVehicleChip">no vehicle</span>
+      </div>
+      <div class="vehicle-select-row">
+        <div class="select-box">
+          <select id="tVehicleSelect" aria-label="Choose vehicle"></select>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <button class="btn btn-soft" type="button" id="tAddVehicleBtn" aria-expanded="false" aria-controls="tNewVehiclePanel">+ Vehicle</button>
+      </div>
+      <p class="vehicle-hint" id="tVehicleHint">Add your first vehicle to begin.</p>
+    </div>
+  </section>
+
+<section class="new-vehicle-panel" id="tNewVehiclePanel" aria-label="Add a vehicle" hidden>
+    <div>
+      <p class="panel-title">Add a vehicle</p>
+      <p class="panel-sub">It gets its own ledger, receipt number and odometer.</p>
+    </div>
+    <div class="panel-fields">
+      <div class="field-box"><input id="tNewVehicleName" type="text" placeholder="Vehicle name" maxlength="40" autocomplete="off" aria-label="Vehicle name"></div>
+      <div class="field-box"><input id="tNewVehicleReg" type="text" placeholder="Reg. no. (optional)" maxlength="20" autocomplete="off" aria-label="Vehicle registration number, optional"></div>
+      <button class="btn btn-primary" type="button" id="tCreateVehicleBtn">Add vehicle</button>
+      <button class="panel-cancel" type="button" id="tCancelVehicleBtn">Cancel</button>
+    </div>
+    <p class="panel-error" id="tNewVehicleError" role="alert" hidden></p>
+  </section>
+
+<div>
+    <section class="stats" aria-label="This vehicle at a glance">
+      <article class="stat">
+        <span class="stat-label">Fill-ups</span>
+        <strong class="stat-value"><span id="tStatEntries">0</span></strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Distance</span>
+        <strong class="stat-value"><span id="tStatDistance">—</span><span class="unit">km</span></strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Fuel used</span>
+        <strong class="stat-value"><span id="tStatFuel">—</span><span class="unit">L</span></strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Avg mileage</span>
+        <strong class="stat-value"><span id="tStatMileage">—</span><span class="unit">km/L</span></strong>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Avg cost</span>
+        <strong class="stat-value"><span class="unit">₹</span><span id="tStatCost">—</span><span class="unit">/km</span></strong>
+      </article>
+      <article class="stat stat--accent">
+        <span class="stat-label">Total paid</span>
+        <strong class="stat-value"><span id="tStatAmount">—</span></strong>
+      </article>
+    </section>
+
+    <section class="ledger" aria-labelledby="tLedgerTitle">
+      <div class="ledger-head">
+        <div>
+          <p class="ledger-kicker">Vehicle ledger</p>
+          <h2 id="tLedgerTitle">No vehicle selected</h2>
+          <p class="ledger-meta" id="tLedgerMeta">Add a vehicle to start a ledger.</p>
+        </div>
+        <div class="ledger-actions">
+          <a class="btn btn-ghost" href="#receipt" data-view-link="receipt" title="Open the receipt view for this vehicle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
+            Receipt view
+          </a>
+          <button class="btn btn-ghost btn-older" type="button" id="tOlderRowBtn" aria-expanded="false" aria-controls="olderRow" title="Add a fill-up with an older date">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M8 3.5v3M16 3.5v3M3.5 10h17M12 13v5M9.5 15.5h5"/></svg>
+            <span id="tOlderRowBtnLabel">Older entry</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="ledger-table" id="ledgerTable">
+          <colgroup>
+            <col><col><col><col><col><col><col><col><col><col><col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col" class="num">Start km</th>
+              <th scope="col" class="num">End km</th>
+              <th scope="col" class="num">Km</th>
+              <th scope="col">Fuel</th>
+              <th scope="col" class="num">Price/L</th>
+              <th scope="col" class="num">Litres</th>
+              <th scope="col" class="num">Km/L</th>
+              <th scope="col" class="num">₹/Km</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col" class="act"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="tEntriesBody"></tbody>
+          <tfoot id="tTableFoot"></tfoot>
+        </table>
+      </div>
+
+      <p class="table-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.1"/></svg>
+        <span>The new fill-up line at the bottom stays open and is saved as a draft — add the end KM after your trip and the line is added automatically once complete. Use Older entry to backfill a past fill-up. Tap or click any cell to edit it; Enter or tap away saves, Esc cancels.</span>
+      </p>
+    </section>
+  </div>
+  </div>
+
+  <footer class="page-footer">
+    <span>Saved only in this browser</span>
+    <span class="foot-dot" aria-hidden="true">·</span>
+    <span>Receipt &amp; table share one ledger</span>
+  </footer>
+</div>
+
+<input id="importJsonInput" type="file" accept="application/json,.json" hidden>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toastMsg"></span>
+  <button type="button" id="toastAction" hidden></button>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'mileage-receipt.v1';
+  const todayISO = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const amountFmt = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const kmFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
+  const dateFmt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const shortDateFmt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+  const timeFmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const stampFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+
+  const $ = (selector, ctx = document) => ctx.querySelector(selector);
+  const $$ = (selector, ctx = document) => Array.from(ctx.querySelectorAll(selector));
+
+  const el = {
+    todayStamp: $('#todayStamp'),
+    countChip: $('#countChip'),
+    form: $('#entryForm'),
+    vehicleField: $('#vehicleField'),
+    vehiclePick: $('#vehiclePick'),
+    vehicleSelect: $('#vehicleSelect'),
+    newVehicle: $('#newVehicle'),
+    cancelVehicle: $('#cancelVehicle'),
+    newVehicleName: $('#newVehicleName'),
+    newVehicleReg: $('#newVehicleReg'),
+    newVehicleError: $('#newVehicleError'),
+    addVehicleBtn: $('#addVehicleBtn'),
+    vehicleMeta: $('#vehicleMeta'),
+    startKm: $('#startKm'),
+    endKm: $('#endKm'),
+    startHelp: $('#startHelp'),
+    endHelp: $('#endHelp'),
+    price: $('#price'),
+    amount: $('#amount'),
+    entryDate: $('#entryDate'),
+    fuels: $$('input[name="fuel"]'),
+    calcDistance: $('#calcDistance'),
+    calcMileage: $('#calcMileage'),
+    calcCost: $('#calcCost'),
+    formError: $('#formError'),
+    formErrorText: $('#formErrorText'),
+    resetFormBtn: $('#resetFormBtn'),
+    printBtn: $('#printBtn'),
+    pngBtn: $('#pngBtn'),
+    paperStage: $('#paperStage'),
+    paper: $('#paper'),
+    receipt: $('#receipt'),
+    rcptDate: $('#rcptDate'),
+    rcptTime: $('#rcptTime'),
+    rcptNo: $('#rcptNo'),
+    rcptEntriesCount: $('#rcptEntriesCount'),
+    rcptVehicleBlock: $('#rcptVehicleBlock'),
+    rcptVehicle: $('#rcptVehicle'),
+    rcptVehicleReg: $('#rcptVehicleReg'),
+    previewLabelText: $('#previewLabelText'),
+    itemsHead: $('#itemsHead'),
+    rcptEntries: $('#rcptEntries'),
+    rcptSummary: $('#rcptSummary'),
+    barcode: $('#barcode'),
+    barcodeNum: $('#barcodeNum'),
+    savedNote: $('#savedNote'),
+    clearReceiptBtn: $('#clearReceiptBtn'),
+    toast: $('#toast'),
+    toastMsg: $('#toastMsg'),
+    toastAction: $('#toastAction')
+  };
+
+  let state;
+  let lastVehicleChoice = '';
+  let newEntryId = null;
+  let clearArmed = false;
+  let clearTimer = null;
+  let toastTimer = null;
+  let storageWarned = false;
+  let libPromise = null;
+  let pngBusy = false;
+
+  function uid() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return `v-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function generateReceiptNo() {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    return `MR-${yy}${mm}-${Math.floor(Math.random() * 9000) + 1000}`;
+  }
+
+  function money(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? `₹${amountFmt.format(n)}` : '—';
+  }
+
+  function formatKm(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? kmFmt.format(n) : '—';
+  }
+
+  function formatDate(value) {
+    let d = null;
+    if (value instanceof Date) {
+      d = value;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) {
+      const [y, m, day] = String(value).split('-').map(Number);
+      d = new Date(y, m - 1, day);
+    }
+    return d && !isNaN(d.getTime()) ? dateFmt.format(d) : '—';
+  }
+
+  function formatShortDate(value) {
+    const d = parseISODate(value);
+    return d ? shortDateFmt.format(d).toUpperCase() : '—';
+  }
+
+  function parseISODate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null;
+    const [y, m, day] = String(value).split('-').map(Number);
+    const d = new Date(y, m - 1, day);
+    return d && !isNaN(d.getTime()) ? d : null;
+  }
+
+  function safeDate(value) {
+    const d = value ? new Date(value) : null;
+    return d && !isNaN(d.getTime()) ? d : new Date();
+  }
+
+  function inputNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function readNumber(input) {
+    const raw = String(input.value).trim();
+    if (raw === '') return NaN;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+  }
+
+  function createState() {
+    return {
+      version: 1,
+      vehicles: [],
+      entries: [],
+      settings: { lastVehicleId: '' }
+    };
+  }
+
+  function loadState(rawOverride) {
+    let raw = null;
+    if (typeof rawOverride === 'string') {
+      raw = rawOverride;
+    } else {
+      try { raw = localStorage.getItem(STORAGE_KEY); } catch { return null; }
+    }
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.vehicles) || !Array.isArray(data.entries)) return null;
+
+      const vehicles = data.vehicles
+        .filter((v) => v && v.id && v.name)
+        .map((v) => {
+          const issued = v.issuedAt ? new Date(v.issuedAt) : null;
+          return {
+            id: String(v.id),
+            name: String(v.name).slice(0, 40),
+            reg: String(v.reg || '').slice(0, 20),
+            receiptNo: typeof v.receiptNo === 'string' && v.receiptNo ? v.receiptNo : generateReceiptNo(),
+            issuedAt: issued && !isNaN(issued.getTime()) ? issued.toISOString() : new Date().toISOString()
+          };
+        });
+
+      const ids = new Set(vehicles.map((v) => v.id));
+      const entries = data.entries
+        .filter((e) => e && ids.has(String(e.vehicleId))
+          && Number.isFinite(Number(e.start)) && Number(e.start) >= 0
+          && Number.isFinite(Number(e.end)) && Number(e.end) > Number(e.start)
+          && Number.isFinite(Number(e.price)) && Number(e.price) > 0
+          && Number.isFinite(Number(e.amount)) && Number(e.amount) > 0)
+        .map((e) => ({
+          id: e.id ? String(e.id) : uid(),
+          vehicleId: String(e.vehicleId),
+          date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
+          start: Number(e.start),
+          end: Number(e.end),
+          price: Number(e.price),
+          amount: Number(e.amount),
+          fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
+          createdAt: e.createdAt || new Date().toISOString()
+        }));
+
+      const wanted = data.settings && data.settings.lastVehicleId;
+      const lastVehicleId = vehicles.some((v) => v.id === wanted) ? wanted : (vehicles[0]?.id || '');
+
+      return {
+        version: 1,
+        vehicles,
+        entries,
+        settings: { lastVehicleId }
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function persist() {
+    const selected = el.vehicleSelect.value;
+    if (selected && selected !== '__new') state.settings.lastVehicleId = selected;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      if (!storageWarned) {
+        storageWarned = true;
+        toast('Local saving is unavailable. Entries may not survive a refresh.');
+      }
+    }
+  }
+
+  function getVehicle(id) {
+    return state.vehicles.find((v) => v.id === id) || null;
+  }
+
+  function getSelectedVehicleId() {
+    const value = el.vehicleSelect.value;
+    return value && value !== '__new' ? value : '';
+  }
+
+  function receiptVehicleId() {
+    const selected = getSelectedVehicleId();
+    if (selected) return selected;
+    return state.vehicles.some((v) => v.id === lastVehicleChoice) ? lastVehicleChoice : '';
+  }
+
+  function currentVehicle() {
+    return getVehicle(receiptVehicleId());
+  }
+
+  function compareEntries(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.start !== b.start) return a.start - b.start;
+    return String(a.createdAt).localeCompare(String(b.createdAt));
+  }
+
+  function currentEntries() {
+    const vehicle = currentVehicle();
+    return vehicle ? state.entries.filter((entry) => entry.vehicleId === vehicle.id).sort(compareEntries) : [];
+  }
+
+  function lastEntryFor(vehicleId) {
+    let latest = null;
+    for (const entry of state.entries) {
+      if (entry.vehicleId !== vehicleId) continue;
+      if (!latest || compareEntries(entry, latest) > 0) latest = entry;
+    }
+    return latest;
+  }
+
+  function derive(entry) {
+    const distance = Math.max(0, entry.end - entry.start);
+    const litres = entry.price > 0 ? entry.amount / entry.price : 0;
+    const mileage = litres > 0 ? distance / litres : 0;
+    const costPerKm = distance > 0 ? entry.amount / distance : 0;
+    return { distance, litres, mileage, costPerKm };
+  }
+
+  function getFuel() {
+    const checked = el.fuels.find((radio) => radio.checked);
+    return checked ? checked.value : 'Petrol';
+  }
+
+  function setFuel(fuel) {
+    el.fuels.forEach((radio) => { radio.checked = radio.value === fuel; });
+  }
+
+  function renderVehicleOptions() {
+    const previous = getSelectedVehicleId() || lastVehicleChoice || state.settings.lastVehicleId;
+
+    if (state.vehicles.length === 0) {
+      el.vehiclePick.hidden = true;
+      el.vehicleSelect.innerHTML = '<option value="">No vehicles yet</option>';
+      el.vehicleSelect.value = '';
+      return;
+    }
+
+    el.vehiclePick.hidden = false;
+    const options = state.vehicles.map((v) => {
+      const label = v.reg ? `${v.name} — ${v.reg}` : v.name;
+      return `<option value="${escapeHTML(v.id)}">${escapeHTML(label)}</option>`;
+    }).join('');
+    el.vehicleSelect.innerHTML = `${options}<option value="__new">+ Add new vehicle</option>`;
+
+    const selected = state.vehicles.some((v) => v.id === previous) ? previous : state.vehicles[0].id;
+    el.vehicleSelect.value = selected;
+    lastVehicleChoice = selected;
+    state.settings.lastVehicleId = selected;
+  }
+
+  function showNewVehicle(show, { focus = true } = {}) {
+    el.newVehicle.hidden = !show;
+    el.cancelVehicle.hidden = !show || state.vehicles.length === 0;
+    if (!show) {
+      el.newVehicleError.hidden = true;
+      el.newVehicleName.removeAttribute('aria-invalid');
+      el.newVehicleReg.removeAttribute('aria-invalid');
+    } else if (focus) {
+      setTimeout(() => el.newVehicleName.focus({ preventScroll: true }), 30);
+    }
+  }
+
+  function applyVehicleDefaults(vehicleId) {
+    const last = lastEntryFor(vehicleId);
+    el.startKm.value = last ? inputNumber(last.end) : '';
+    el.price.value = last ? inputNumber(last.price) : '';
+    el.endKm.value = '';
+    el.amount.value = '';
+    setFuel(last ? last.fuel : 'Petrol');
+    clearFormError();
+    updateCalc();
+    updateStartHelp();
+    updateVehicleMeta();
+  }
+
+  function updateStartHelp() {
+    const vehicleId = getSelectedVehicleId();
+    el.startHelp.classList.remove('is-warn');
+
+    if (!vehicleId) {
+      el.startHelp.textContent = state.vehicles.length ? 'Choose a vehicle to continue.' : 'Add your first vehicle above.';
+      return;
+    }
+
+    const last = lastEntryFor(vehicleId);
+    if (!last) {
+      el.startHelp.textContent = 'First reading for this vehicle.';
+      return;
+    }
+
+    const raw = el.startKm.value.trim();
+    const value = Number(raw);
+    if (raw === '') {
+      el.startHelp.textContent = `Last reading: ${formatKm(last.end)} km.`;
+      return;
+    }
+    if (Number.isFinite(value) && Math.abs(value - last.end) < 0.005) {
+      el.startHelp.textContent = `Continues from ${formatKm(last.end)} km.`;
+      return;
+    }
+    el.startHelp.textContent = `Last reading ${formatKm(last.end)} km — this doesn't continue from it.`;
+    el.startHelp.classList.add('is-warn');
+  }
+
+  function updateEndHelp(distance, start, end) {
+    el.endHelp.classList.remove('is-warn');
+    if (Number.isFinite(distance) && distance > 0) {
+      el.endHelp.textContent = `Distance: ${formatKm(distance)} km.`;
+      return;
+    }
+    if (Number.isFinite(start) && Number.isFinite(end) && end <= start) {
+      el.endHelp.textContent = 'End KM must be higher than Start KM.';
+      el.endHelp.classList.add('is-warn');
+      return;
+    }
+    el.endHelp.textContent = 'Distance is calculated for you.';
+  }
+
+  function updateVehicleMeta() {
+    const vehicleId = getSelectedVehicleId();
+    if (!vehicleId) {
+      el.vehicleMeta.textContent = state.vehicles.length ? 'No vehicle selected.' : 'Each vehicle keeps its own odometer.';
+      return;
+    }
+    const entries = state.entries.filter((entry) => entry.vehicleId === vehicleId);
+    const last = entries[entries.length - 1];
+    if (!last) {
+      el.vehicleMeta.textContent = 'No readings yet for this vehicle.';
+      return;
+    }
+    el.vehicleMeta.textContent = `${entries.length} ${entries.length === 1 ? 'fill-up' : 'fill-ups'} · last at ${formatKm(last.end)} km`;
+  }
+
+  function updateCalc() {
+    const start = readNumber(el.startKm);
+    const end = readNumber(el.endKm);
+    const price = readNumber(el.price);
+    const amount = readNumber(el.amount);
+
+    const distance = (Number.isFinite(start) && Number.isFinite(end) && end > start) ? end - start : NaN;
+    const litres = (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) ? amount / price : NaN;
+    const mileage = (Number.isFinite(distance) && Number.isFinite(litres) && litres > 0) ? distance / litres : NaN;
+    const costPerKm = (Number.isFinite(distance) && Number.isFinite(amount)) ? amount / distance : NaN;
+
+    el.calcDistance.textContent = Number.isFinite(distance) ? formatKm(distance) : '—';
+    el.calcMileage.textContent = Number.isFinite(mileage) ? amountFmt.format(mileage) : '—';
+    el.calcCost.textContent = Number.isFinite(costPerKm) ? amountFmt.format(costPerKm) : '—';
+    updateEndHelp(distance, start, end);
+  }
+
+  function clearFormError() {
+    el.formError.hidden = true;
+    el.formErrorText.textContent = '';
+    $$('.has-error', el.form).forEach((node) => node.classList.remove('has-error'));
+    $$('[aria-invalid="true"]', el.form).forEach((node) => node.removeAttribute('aria-invalid'));
+  }
+
+  function showFormError(message, field) {
+    el.formErrorText.textContent = message;
+    el.formError.hidden = false;
+    if (field) {
+      const wrap = field.closest('.field');
+      if (wrap) wrap.classList.add('has-error');
+      field.setAttribute('aria-invalid', 'true');
+      field.focus({ preventScroll: false });
+    }
+  }
+
+  function resetClearButton() {
+    clearArmed = false;
+    clearTimeout(clearTimer);
+    el.clearReceiptBtn.classList.remove('is-armed');
+    el.clearReceiptBtn.textContent = 'Clear receipt';
+    el.clearReceiptBtn.hidden = currentEntries().length === 0;
+  }
+
+  function syncChrome() {
+    const vehicle = currentVehicle();
+    const count = currentEntries().length;
+    el.countChip.textContent = count === 0 ? 'empty' : `${count} logged`;
+    el.savedNote.textContent = !vehicle
+      ? 'Saved locally'
+      : count === 0
+        ? 'Saved locally · empty receipt'
+        : `Saved locally · ${count} ${count === 1 ? 'entry' : 'entries'}`;
+    resetClearButton();
+  }
+
+  function entryMarkup(entry) {
+    const vehicle = getVehicle(entry.vehicleId);
+    const d = derive(entry);
+    const isNew = entry.id === newEntryId ? ' entry--new' : '';
+    const name = vehicle ? vehicle.name : 'Vehicle';
+    const details = `${entry.fuel} · ${formatDate(entry.date)} · ${formatKm(entry.start)} → ${formatKm(entry.end)} km · ${amountFmt.format(d.litres)} L @ ${money(entry.price)}/L`;
+
+    return `<article class="entry${isNew}" data-entry-id="${escapeHTML(entry.id)}" title="${escapeHTML(details)}">
+      <span class="cell cell-date" data-label="Date">${formatShortDate(entry.date)}</span>
+      <span class="cell" data-label="Start km">${formatKm(entry.start)}</span>
+      <span class="cell" data-label="End km">${formatKm(entry.end)}</span>
+      <span class="cell" data-label="Km">${formatKm(d.distance)}</span>
+      <span class="cell entry-mileage" data-label="Km/L">${amountFmt.format(d.mileage)}</span>
+      <span class="cell" data-label="₹/Km">${amountFmt.format(d.costPerKm)}</span>
+      <span class="cell entry-amount" data-label="Amount">${money(entry.amount)}</span>
+      <button class="entry-void" type="button" data-void="${escapeHTML(entry.id)}" aria-label="Void this entry for ${escapeHTML(name)}" title="Void this entry">×</button>
+    </article>`;
+  }
+
+  function summaryMarkup() {
+    const entries = currentEntries();
+    const totals = entries.reduce((acc, entry) => {
+      const d = derive(entry);
+      acc.distance += d.distance;
+      acc.litres += d.litres;
+      acc.amount += entry.amount;
+      return acc;
+    }, { distance: 0, litres: 0, amount: 0 });
+
+    const mileage = totals.litres > 0 ? totals.distance / totals.litres : 0;
+    const costPerKm = totals.distance > 0 ? totals.amount / totals.distance : 0;
+
+    return `<div class="rcpt-rule" aria-hidden="true">* * * * * * * * * * * * * * * * * * * * * * * * *</div>
+      <div class="total-row"><span class="t-key">Total distance</span><span class="t-val">${formatKm(totals.distance)} km</span></div>
+      <div class="total-row"><span class="t-key">Total fuel</span><span class="t-val">${amountFmt.format(totals.litres)} L</span></div>
+      <div class="total-row"><span class="t-key">Average mileage</span><span class="t-val accent">${amountFmt.format(mileage)} km/L</span></div>
+      <div class="total-row"><span class="t-key">Average cost / km</span><span class="t-val">${money(costPerKm)}</span></div>
+      <div class="grand-total"><span class="g-key">Total paid</span><span class="g-val">${money(totals.amount)}</span></div>`;
+  }
+
+  function hashString(value) {
+    let h = 2166136261;
+    for (let i = 0; i < value.length; i++) {
+      h ^= value.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(seed) {
+    let a = seed;
+    return function random() {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function barcodeMarkup(seed) {
+    const random = mulberry32(hashString(seed));
+    let bars = '';
+    for (let i = 0; i < 38; i++) {
+      let width = 1 + Math.floor(random() * 2.6);
+      if (i < 2 || i > 35) width = 2;
+      bars += `<span style="width:${width}px"></span>`;
+    }
+    return bars;
+  }
+
+  function renderReceipt() {
+    const vehicle = currentVehicle();
+    const entries = currentEntries();
+    const issued = safeDate(vehicle ? vehicle.issuedAt : null);
+
+    el.rcptDate.textContent = vehicle ? formatDate(issued).toUpperCase() : '—';
+    el.rcptTime.textContent = vehicle ? timeFmt.format(issued) : '—';
+    el.rcptNo.textContent = vehicle ? vehicle.receiptNo : '—';
+    el.rcptEntriesCount.textContent = vehicle ? String(entries.length) : '0';
+
+    if (vehicle) {
+      el.rcptVehicleBlock.hidden = false;
+      el.rcptVehicle.textContent = vehicle.name;
+      el.rcptVehicleReg.textContent = vehicle.reg || '';
+      el.rcptVehicleReg.hidden = !vehicle.reg;
+      el.previewLabelText.textContent = `${vehicle.name} · receipt preview`;
+    } else {
+      el.rcptVehicleBlock.hidden = true;
+      el.rcptVehicle.textContent = '';
+      el.rcptVehicleReg.textContent = '';
+      el.rcptVehicleReg.hidden = true;
+      el.previewLabelText.textContent = 'Receipt preview';
+    }
+
+    if (!vehicle) {
+      el.itemsHead.hidden = true;
+      el.rcptEntries.innerHTML = `<div class="rcpt-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/><path d="M4 21h11M5 10h9"/><path d="M14 7h2.5A1.5 1.5 0 0 1 18 8.5V15a1.5 1.5 0 0 0 3 0V9.5L18.5 7"/></svg>
+        <p class="rcpt-empty-title">Add a vehicle</p>
+        <p>Add your first vehicle to open its receipt.</p>
+      </div>`;
+      el.rcptSummary.hidden = true;
+      el.rcptSummary.innerHTML = '';
+    } else if (entries.length === 0) {
+      el.itemsHead.hidden = true;
+      el.rcptEntries.innerHTML = `<div class="rcpt-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/><path d="M4 21h11M5 10h9"/><path d="M14 7h2.5A1.5 1.5 0 0 1 18 8.5V15a1.5 1.5 0 0 0 3 0V9.5L18.5 7"/></svg>
+        <p class="rcpt-empty-title">No entries yet</p>
+        <p>Log the first fill-up for ${escapeHTML(vehicle.name)}.</p>
+      </div>`;
+      el.rcptSummary.hidden = true;
+      el.rcptSummary.innerHTML = '';
+    } else {
+      el.itemsHead.hidden = false;
+      el.rcptEntries.innerHTML = entries.map(entryMarkup).join('');
+      el.rcptSummary.hidden = false;
+      el.rcptSummary.innerHTML = summaryMarkup();
+    }
+
+    el.barcode.innerHTML = barcodeMarkup(vehicle ? vehicle.receiptNo : 'no-vehicle');
+    el.barcodeNum.textContent = vehicle ? vehicle.receiptNo : '—';
+    syncChrome();
+
+    if (newEntryId) {
+      const animatedId = newEntryId;
+      setTimeout(() => {
+        $$('.entry--new', el.receipt).forEach((node) => node.classList.remove('entry--new'));
+        if (newEntryId === animatedId) newEntryId = null;
+      }, 600);
+    }
+  }
+
+  function handleVehicleChange() {
+    const value = el.vehicleSelect.value;
+    if (value === '__new') {
+      showNewVehicle(true);
+      renderReceipt();
+      return;
+    }
+    if (!value) return;
+    showNewVehicle(false, { focus: false });
+    lastVehicleChoice = value;
+    state.settings.lastVehicleId = value;
+    applyVehicleDefaults(value);
+    renderReceipt();
+    persist();
+  }
+
+  function addVehicle() {
+    const name = el.newVehicleName.value.trim();
+    const reg = el.newVehicleReg.value.trim();
+
+    if (!name) {
+      el.newVehicleError.textContent = 'Give this vehicle a name first.';
+      el.newVehicleError.hidden = false;
+      el.newVehicleName.setAttribute('aria-invalid', 'true');
+      el.newVehicleName.focus();
+      return;
+    }
+
+    if (state.vehicles.some((v) => v.name.toLowerCase() === name.toLowerCase())) {
+      el.newVehicleError.textContent = 'That vehicle already exists. Pick it from the list.';
+      el.newVehicleError.hidden = false;
+      el.newVehicleName.focus();
+      return;
+    }
+
+    const vehicle = {
+      id: uid(),
+      name: name.slice(0, 40),
+      reg: reg.slice(0, 20),
+      receiptNo: generateReceiptNo(),
+      issuedAt: new Date().toISOString()
+    };
+    state.vehicles.push(vehicle);
+    state.settings.lastVehicleId = vehicle.id;
+    lastVehicleChoice = vehicle.id;
+    el.newVehicleName.value = '';
+    el.newVehicleReg.value = '';
+    showNewVehicle(false, { focus: false });
+    renderVehicleOptions();
+    el.vehicleSelect.value = vehicle.id;
+    applyVehicleDefaults(vehicle.id);
+    renderReceipt();
+    persist();
+    updateVehicleMeta();
+    el.startKm.focus();
+    toast(`${vehicle.name} added. Enter its first reading.`);
+  }
+
+  function cancelNewVehicle() {
+    showNewVehicle(false, { focus: false });
+    if (state.vehicles.length) {
+      const fallback = state.vehicles.some((v) => v.id === lastVehicleChoice) ? lastVehicleChoice : state.vehicles[0].id;
+      el.vehicleSelect.value = fallback;
+      lastVehicleChoice = fallback;
+      updateStartHelp();
+      updateVehicleMeta();
+      renderReceipt();
+    }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    clearFormError();
+
+    const vehicleId = getSelectedVehicleId();
+    if (!vehicleId) {
+      showNewVehicle(true);
+      showFormError('Add or choose a vehicle before logging a fill-up.', el.newVehicleName);
+      return;
+    }
+
+    const start = readNumber(el.startKm);
+    const end = readNumber(el.endKm);
+    const price = readNumber(el.price);
+    const amount = readNumber(el.amount);
+
+    if (!Number.isFinite(start) || start < 0) {
+      showFormError('Enter the starting odometer reading.', el.startKm);
+      return;
+    }
+    if (!Number.isFinite(end) || end < 0) {
+      showFormError('Enter the ending odometer reading.', el.endKm);
+      return;
+    }
+    if (end <= start) {
+      showFormError('End KM must be higher than Start KM.', el.endKm);
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      showFormError('Enter the price you paid per litre.', el.price);
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showFormError('Enter the total amount paid.', el.amount);
+      return;
+    }
+    if (!el.entryDate.value) {
+      showFormError('Choose the date of this fill-up.', el.entryDate);
+      return;
+    }
+
+    const entry = {
+      id: uid(),
+      vehicleId,
+      date: el.entryDate.value,
+      start,
+      end,
+      price,
+      amount,
+      fuel: getFuel(),
+      createdAt: new Date().toISOString()
+    };
+
+    state.entries.push(entry);
+    newEntryId = entry.id;
+    state.settings.lastVehicleId = vehicleId;
+    const vehicle = getVehicle(vehicleId);
+    if (vehicle) vehicle.issuedAt = entry.createdAt;
+    const latest = lastEntryFor(vehicleId);
+    el.startKm.value = latest ? inputNumber(latest.end) : '';
+    el.endKm.value = '';
+    el.amount.value = '';
+    persist();
+    renderReceipt();
+    updateVehicleMeta();
+    updateStartHelp();
+    updateCalc();
+    el.endKm.focus();
+    toast('Entry added to the receipt.');
+  }
+
+  function resetForm() {
+    clearFormError();
+    const vehicleId = getSelectedVehicleId();
+    if (vehicleId) {
+      applyVehicleDefaults(vehicleId);
+    } else {
+      el.startKm.value = '';
+      el.endKm.value = '';
+      el.price.value = '';
+      el.amount.value = '';
+      setFuel('Petrol');
+      updateCalc();
+      updateStartHelp();
+      updateVehicleMeta();
+    }
+    el.entryDate.value = todayISO();
+    el.entryDate.max = todayISO();
+  }
+
+  function voidEntry(entryId) {
+    const index = state.entries.findIndex((entry) => entry.id === entryId);
+    if (index < 0) return;
+    const [removed] = state.entries.splice(index, 1);
+    persist();
+    renderReceipt();
+    updateVehicleMeta();
+    updateStartHelp();
+
+    toast('Entry voided.', 'Undo', () => {
+      state.entries.splice(Math.min(index, state.entries.length), 0, removed);
+      persist();
+      renderReceipt();
+      updateVehicleMeta();
+      updateStartHelp();
+      toast('Entry restored.');
+    });
+  }
+
+  function handleClearReceipt() {
+    const vehicle = currentVehicle();
+    if (!vehicle || currentEntries().length === 0) return;
+
+    if (!clearArmed) {
+      clearArmed = true;
+      el.clearReceiptBtn.classList.add('is-armed');
+      el.clearReceiptBtn.textContent = 'Confirm clear';
+      clearTimeout(clearTimer);
+      clearTimer = setTimeout(resetClearButton, 4000);
+      return;
+    }
+
+    clearTimeout(clearTimer);
+    clearArmed = false;
+    state.entries = state.entries.filter((entry) => entry.vehicleId !== vehicle.id);
+    vehicle.receiptNo = generateReceiptNo();
+    vehicle.issuedAt = new Date().toISOString();
+    persist();
+    renderReceipt();
+    updateVehicleMeta();
+    updateStartHelp();
+    toast(`${vehicle.name} receipt cleared. Other vehicles were kept.`);
+  }
+
+  function hideToast() {
+    el.toast.classList.remove('is-visible');
+    clearTimeout(toastTimer);
+  }
+
+  function toast(message, actionLabel = '', action = null) {
+    el.toastMsg.textContent = message;
+    if (actionLabel) {
+      el.toastAction.hidden = false;
+      el.toastAction.textContent = actionLabel;
+      el.toastAction.onclick = () => {
+        hideToast();
+        if (typeof action === 'function') action();
+      };
+    } else {
+      el.toastAction.hidden = true;
+      el.toastAction.onclick = null;
+    }
+    el.toast.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, actionLabel ? 5500 : 2800);
+  }
+
+  function ensureHtml2Canvas() {
+    if (typeof window.html2canvas === 'function') return Promise.resolve(true);
+    if (!libPromise) {
+      libPromise = new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        script.onload = () => resolve(typeof window.html2canvas === 'function');
+        script.onerror = () => resolve(false);
+        document.head.appendChild(script);
+      }).then((ok) => {
+        if (!ok) libPromise = null;
+        return ok;
+      });
+    }
+    return libPromise;
+  }
+
+  async function downloadPng() {
+    if (pngBusy) return;
+    pngBusy = true;
+    const label = el.pngBtn.querySelector('span');
+    const originalLabel = label.textContent;
+    el.pngBtn.disabled = true;
+    label.textContent = 'Rendering';
+    hideToast();
+
+    try {
+      const ready = await ensureHtml2Canvas();
+      if (!ready) {
+        toast('Could not load the PNG tool. Use Print → Save as PDF instead.');
+        return;
+      }
+      try { await document.fonts.ready; } catch {}
+      document.body.classList.add('is-exporting');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const canvas = await window.html2canvas(el.paperStage, {
+        scale: Math.min(3, Math.max(2, window.devicePixelRatio || 1)),
+        backgroundColor: '#eae7df',
+        useCORS: true,
+        logging: false
+      });
+      const vehicle = currentVehicle();
+      const link = document.createElement('a');
+      const safeNo = (vehicle ? vehicle.receiptNo : 'no-vehicle').replace(/[^a-z0-9-]/gi, '');
+      const safeName = (vehicle ? vehicle.name : 'mileage')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'mileage';
+      link.download = `${safeName}-receipt-${safeNo}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      toast('Receipt downloaded as PNG.');
+    } catch (error) {
+      console.error(error);
+      toast('Could not create the PNG. Try printing instead.');
+    } finally {
+      document.body.classList.remove('is-exporting');
+      el.pngBtn.disabled = false;
+      label.textContent = originalLabel;
+      pngBusy = false;
+    }
+  }
+
+  function syncFromStorage({ notify = false, adoptSelection = false } = {}) {
+    const incoming = loadState();
+    if (!incoming) return;
+
+    const wasAdding = el.vehicleSelect.value === '__new';
+    const previousSelected = getSelectedVehicleId();
+    const activeId = adoptSelection ? '' : (getSelectedVehicleId() || lastVehicleChoice);
+    const hadActive = Boolean(activeId);
+
+    state = incoming;
+
+    let selected = state.vehicles.some((v) => v.id === activeId) ? activeId : '';
+    if (!selected) {
+      selected = state.vehicles.some((v) => v.id === state.settings.lastVehicleId)
+        ? state.settings.lastVehicleId
+        : (state.vehicles[0] ? state.vehicles[0].id : '');
+    }
+
+    lastVehicleChoice = selected;
+    state.settings.lastVehicleId = selected;
+    renderVehicleOptions();
+
+    const keepAdding = wasAdding && hadActive && state.vehicles.length > 0;
+    if (state.vehicles.length === 0) {
+      showNewVehicle(true, { focus: false });
+    } else if (keepAdding) {
+      el.vehicleSelect.value = '__new';
+      showNewVehicle(true, { focus: false });
+    } else {
+      el.vehicleSelect.value = selected;
+      lastVehicleChoice = selected;
+      showNewVehicle(false, { focus: false });
+      if (adoptSelection && selected && selected !== previousSelected) {
+        applyVehicleDefaults(selected);
+      }
+    }
+
+    renderReceipt();
+    updateVehicleMeta();
+    updateStartHelp();
+    if (notify) toast('Receipt updated from the table view.');
+  }
+
+  function bindEvents() {
+    el.form.addEventListener('submit', handleSubmit);
+    el.vehicleSelect.addEventListener('change', handleVehicleChange);
+    el.addVehicleBtn.addEventListener('click', addVehicle);
+    el.cancelVehicle.addEventListener('click', cancelNewVehicle);
+
+    [el.newVehicleName, el.newVehicleReg].forEach((input) => {
+      input.addEventListener('input', () => {
+        el.newVehicleError.hidden = true;
+        input.removeAttribute('aria-invalid');
+      });
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addVehicle();
+        }
+      });
+    });
+
+    [el.startKm, el.endKm, el.price, el.amount].forEach((input) => {
+      input.addEventListener('input', () => {
+        clearFormError();
+        updateCalc();
+        if (input === el.startKm) updateStartHelp();
+      });
+    });
+    el.startKm.addEventListener('blur', updateStartHelp);
+    el.entryDate.addEventListener('input', clearFormError);
+    el.fuels.forEach((radio) => radio.addEventListener('change', clearFormError));
+
+    el.resetFormBtn.addEventListener('click', resetForm);
+    el.printBtn.addEventListener('click', () => {
+      hideToast();
+      window.print();
+    });
+    el.pngBtn.addEventListener('click', downloadPng);
+    el.clearReceiptBtn.addEventListener('click', handleClearReceipt);
+
+    el.receipt.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-void]');
+      if (button) voidEntry(button.dataset.void);
+    });
+
+    window.addEventListener('beforeprint', hideToast);
+
+    window.addEventListener('storage', (event) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      syncFromStorage({ notify: document.body.classList.contains('view-receipt') });
+    });
+
+    window.addEventListener('focus', () => {
+      if (!document.hidden) syncFromStorage();
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      syncFromStorage();
+    });
+  }
+
+  window.mileageReceipt = {
+    syncView: () => { if (state) syncFromStorage({ adoptSelection: true }); },
+    normalizeState: (data) => {
+      try { return loadState(JSON.stringify(data)); } catch { return null; }
+    },
+    resetForm: () => resetForm(),
+    notify: (message, actionLabel, action) => toast(message, actionLabel, action)
+  };
+
+  function init() {
+    state = loadState() || createState();
+    lastVehicleChoice = state.settings.lastVehicleId || state.vehicles[0]?.id || '';
+    el.entryDate.value = todayISO();
+    el.entryDate.max = todayISO();
+    el.todayStamp.textContent = stampFmt.format(new Date());
+
+    renderVehicleOptions();
+
+    if (state.vehicles.length) {
+      const selected = state.vehicles.some((v) => v.id === lastVehicleChoice) ? lastVehicleChoice : state.vehicles[0].id;
+      el.vehicleSelect.value = selected;
+      lastVehicleChoice = selected;
+      state.settings.lastVehicleId = selected;
+      showNewVehicle(false, { focus: false });
+      applyVehicleDefaults(selected);
+    } else {
+      showNewVehicle(true, { focus: false });
+      updateCalc();
+      updateStartHelp();
+      updateVehicleMeta();
+    }
+
+    persist();
+    renderReceipt();
+    bindEvents();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'mileage-receipt.v1';
+  const DRAFT_KEY = 'mileage-receipt.table-draft.v1';
+  const todayISO = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const amountFmt = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const kmFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
+  const dateFmt = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const $ = (selector, ctx = document) => ctx.querySelector(selector);
+  const $$ = (selector, ctx = document) => Array.from(ctx.querySelectorAll(selector));
+
+  const el = {
+    vehicleSelect: $('#tVehicleSelect'),
+    vehicleChip: $('#tVehicleChip'),
+    vehicleHint: $('#tVehicleHint'),
+    addVehicleBtn: $('#tAddVehicleBtn'),
+    newVehiclePanel: $('#tNewVehiclePanel'),
+    newVehicleName: $('#tNewVehicleName'),
+    newVehicleReg: $('#tNewVehicleReg'),
+    newVehicleError: $('#tNewVehicleError'),
+    createVehicleBtn: $('#tCreateVehicleBtn'),
+    cancelVehicleBtn: $('#tCancelVehicleBtn'),
+    statEntries: $('#tStatEntries'),
+    statDistance: $('#tStatDistance'),
+    statFuel: $('#tStatFuel'),
+    statMileage: $('#tStatMileage'),
+    statCost: $('#tStatCost'),
+    statAmount: $('#tStatAmount'),
+    ledgerTitle: $('#tLedgerTitle'),
+    ledgerMeta: $('#tLedgerMeta'),
+    olderRowBtn: $('#tOlderRowBtn'),
+    olderRowBtnLabel: $('#tOlderRowBtnLabel'),
+    entriesBody: $('#tEntriesBody'),
+    tableFoot: $('#tTableFoot'),
+    toast: $('#toast'),
+    toastMsg: $('#toastMsg'),
+    toastAction: $('#toastAction')
+  };
+
+  const EDITABLE_KEYS = ['date', 'start', 'end', 'fuel', 'price', 'amount'];
+
+  let state;
+  let selectedVehicleId = '';
+  let editingCell = null;
+  let olderOpen = false;
+  let olderDraft = null;
+  let addDraft = null;
+  let drafts = {};
+  let toastTimer = null;
+  let storageWarned = false;
+  let lastAutoAddAt = 0;
+
+  function uid() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return `v-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function generateReceiptNo() {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    return `MR-${yy}${mm}-${Math.floor(Math.random() * 9000) + 1000}`;
+  }
+
+  function money(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? `₹${amountFmt.format(n)}` : '—';
+  }
+
+  function formatKm(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? kmFmt.format(n) : '—';
+  }
+
+  function formatDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return '—';
+    const [y, m, day] = String(value).split('-').map(Number);
+    const d = new Date(y, m - 1, day);
+    return d && !isNaN(d.getTime()) ? dateFmt.format(d) : '—';
+  }
+
+  function inputNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function parseInput(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (raw === '') return NaN;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+  }
+
+  function createState() {
+    return {
+      version: 1,
+      vehicles: [],
+      entries: [],
+      settings: { lastVehicleId: '' }
+    };
+  }
+
+  function loadState(rawOverride) {
+    let raw = null;
+    if (typeof rawOverride === 'string') {
+      raw = rawOverride;
+    } else {
+      try { raw = localStorage.getItem(STORAGE_KEY); } catch { return null; }
+    }
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.vehicles) || !Array.isArray(data.entries)) return null;
+
+      const vehicles = data.vehicles
+        .filter((v) => v && v.id && v.name)
+        .map((v) => {
+          const issued = v.issuedAt ? new Date(v.issuedAt) : null;
+          return {
+            id: String(v.id),
+            name: String(v.name).slice(0, 40),
+            reg: String(v.reg || '').slice(0, 20),
+            receiptNo: typeof v.receiptNo === 'string' && v.receiptNo ? v.receiptNo : generateReceiptNo(),
+            issuedAt: issued && !isNaN(issued.getTime()) ? issued.toISOString() : new Date().toISOString()
+          };
+        });
+
+      const ids = new Set(vehicles.map((v) => v.id));
+      const entries = data.entries
+        .filter((e) => e && ids.has(String(e.vehicleId))
+          && Number.isFinite(Number(e.start)) && Number(e.start) >= 0
+          && Number.isFinite(Number(e.end)) && Number(e.end) > Number(e.start)
+          && Number.isFinite(Number(e.price)) && Number(e.price) > 0
+          && Number.isFinite(Number(e.amount)) && Number(e.amount) > 0)
+        .map((e) => ({
+          id: e.id ? String(e.id) : uid(),
+          vehicleId: String(e.vehicleId),
+          date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
+          start: Number(e.start),
+          end: Number(e.end),
+          price: Number(e.price),
+          amount: Number(e.amount),
+          fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
+          createdAt: e.createdAt || new Date().toISOString()
+        }));
+
+      const wanted = data.settings && data.settings.lastVehicleId;
+      const lastVehicleId = vehicles.some((v) => v.id === wanted) ? wanted : (vehicles[0] ? vehicles[0].id : '');
+
+      return {
+        version: 1,
+        vehicles,
+        entries,
+        settings: { lastVehicleId }
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function loadDrafts() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return {};
+      const data = JSON.parse(raw);
+      return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function persistDraft() {
+    const vehicle = currentVehicle();
+    if (!vehicle || !addDraft) return;
+    drafts[vehicle.id] = { ...addDraft };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+    } catch {
+      /* the main ledger still reports storage problems */
+    }
+  }
+
+  function persist() {
+    const vehicle = currentVehicle();
+    if (vehicle) state.settings.lastVehicleId = vehicle.id;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      if (!storageWarned) {
+        storageWarned = true;
+        toast('Local saving is unavailable. Changes may not survive a refresh.');
+      }
+    }
+  }
+
+  function getVehicle(id) {
+    return state.vehicles.find((v) => v.id === id) || null;
+  }
+
+  function currentVehicle() {
+    return getVehicle(selectedVehicleId);
+  }
+
+  function currentEntries() {
+    const vehicle = currentVehicle();
+    return vehicle
+      ? state.entries.filter((entry) => entry.vehicleId === vehicle.id).sort(compareEntries)
+      : [];
+  }
+
+  function compareEntries(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (a.start !== b.start) return a.start - b.start;
+    return String(a.createdAt).localeCompare(String(b.createdAt));
+  }
+
+  function sortVehicleEntries(vehicleId) {
+    const own = state.entries
+      .filter((entry) => entry.vehicleId === vehicleId)
+      .sort(compareEntries);
+    let index = 0;
+    state.entries = state.entries.map((entry) => (
+      entry.vehicleId === vehicleId ? own[index++] : entry
+    ));
+  }
+
+  function lastEntryFor(vehicleId) {
+    let latest = null;
+    for (const entry of state.entries) {
+      if (entry.vehicleId !== vehicleId) continue;
+      if (!latest || compareEntries(entry, latest) > 0) latest = entry;
+    }
+    return latest;
+  }
+
+  function ensureSelection() {
+    let id = state.vehicles.some((v) => v.id === selectedVehicleId) ? selectedVehicleId : '';
+    if (!id) {
+      const wanted = state.settings && state.settings.lastVehicleId;
+      id = state.vehicles.some((v) => v.id === wanted) ? wanted : (state.vehicles[0] ? state.vehicles[0].id : '');
+    }
+    selectedVehicleId = id;
+    if (id) state.settings.lastVehicleId = id;
+  }
+
+  function resetAddDraft({ useSaved = true } = {}) {
+    const vehicle = currentVehicle();
+    if (!vehicle) {
+      addDraft = { date: todayISO(), start: '', end: '', fuel: 'Petrol', price: '', amount: '' };
+      return;
+    }
+
+    const saved = useSaved ? drafts[vehicle.id] : null;
+    if (saved && typeof saved === 'object') {
+      addDraft = {
+        date: /^\d{4}-\d{2}-\d{2}$/.test(String(saved.date || '')) ? saved.date : todayISO(),
+        start: saved.start == null ? '' : String(saved.start),
+        end: saved.end == null ? '' : String(saved.end),
+        fuel: saved.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
+        price: saved.price == null ? '' : String(saved.price),
+        amount: saved.amount == null ? '' : String(saved.amount)
+      };
+      return;
+    }
+
+    const last = lastEntryFor(vehicle.id);
+    addDraft = {
+      date: todayISO(),
+      start: last ? inputNumber(last.end) : '',
+      end: '',
+      fuel: last ? last.fuel : 'Petrol',
+      price: last ? inputNumber(last.price) : '',
+      amount: ''
+    };
+  }
+
+  function resetOlderDraft() {
+    olderDraft = { date: '', start: '', end: '', fuel: 'Petrol', price: '', amount: '' };
+  }
+
+  function derive(entry) {
+    const distance = Math.max(0, entry.end - entry.start);
+    const litres = entry.price > 0 ? entry.amount / entry.price : 0;
+    const mileage = litres > 0 ? distance / litres : 0;
+    const costPerKm = distance > 0 ? entry.amount / distance : 0;
+    return { distance, litres, mileage, costPerKm };
+  }
+
+  function calcValues(startRaw, endRaw, priceRaw, amountRaw) {
+    const start = parseInput(startRaw);
+    const end = parseInput(endRaw);
+    const price = parseInput(priceRaw);
+    const amount = parseInput(amountRaw);
+    const distance = (Number.isFinite(start) && Number.isFinite(end) && end > start) ? end - start : NaN;
+    const litres = (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) ? amount / price : NaN;
+    const mileage = (Number.isFinite(distance) && Number.isFinite(litres) && litres > 0) ? distance / litres : NaN;
+    const costPerKm = (Number.isFinite(distance) && distance > 0 && Number.isFinite(amount) && amount > 0) ? amount / distance : NaN;
+    return { distance, litres, mileage, costPerKm };
+  }
+
+  function renderVehicleSelect() {
+    const vehicle = currentVehicle();
+    el.vehicleSelect.disabled = state.vehicles.length === 0;
+    if (state.vehicles.length === 0) {
+      el.vehicleSelect.innerHTML = '<option value="">No vehicles yet</option>';
+      return;
+    }
+    const options = state.vehicles.map((v) => {
+      const label = v.reg ? `${v.name} — ${v.reg}` : v.name;
+      return `<option value="${escapeHTML(v.id)}">${escapeHTML(label)}</option>`;
+    }).join('');
+    el.vehicleSelect.innerHTML = options;
+    el.vehicleSelect.value = vehicle ? vehicle.id : state.vehicles[0].id;
+  }
+
+  function renderHeading(vehicle, entries) {
+    if (!vehicle) {
+      el.vehicleChip.textContent = 'no vehicle';
+      el.vehicleHint.textContent = state.vehicles.length ? 'Choose a vehicle to see its ledger.' : 'Add your first vehicle to begin.';
+      el.ledgerTitle.textContent = 'No vehicle selected';
+      el.ledgerMeta.textContent = 'Add a vehicle to start a ledger.';
+      return;
+    }
+
+    const count = entries.length;
+    const last = lastEntryFor(vehicle.id);
+    el.vehicleChip.textContent = count === 0 ? 'empty' : `${count} ${count === 1 ? 'fill-up' : 'fill-ups'}`;
+    el.vehicleHint.textContent = count === 0
+      ? 'No fill-ups yet — this vehicle starts with a clean odometer.'
+      : `${count} ${count === 1 ? 'fill-up' : 'fill-ups'} · last at ${formatKm(last ? last.end : 0)} km`;
+    el.ledgerTitle.textContent = vehicle.name;
+    el.ledgerMeta.textContent = [
+      vehicle.reg || '',
+      `receipt ${vehicle.receiptNo}`,
+      `${count} ${count === 1 ? 'entry' : 'entries'}`
+    ].filter(Boolean).join(' · ');
+    if (document.body.classList.contains('view-table')) document.title = `${vehicle.name} Table — Mileage Receipt`;
+  }
+
+  function updateStats(vehicle, entries) {
+    if (!vehicle || entries.length === 0) {
+      el.statEntries.textContent = vehicle ? '0' : '—';
+      el.statDistance.textContent = '—';
+      el.statFuel.textContent = '—';
+      el.statMileage.textContent = '—';
+      el.statCost.textContent = '—';
+      el.statAmount.textContent = '—';
+      return;
+    }
+
+    const totals = entries.reduce((acc, entry) => {
+      const d = derive(entry);
+      acc.distance += d.distance;
+      acc.litres += d.litres;
+      acc.amount += entry.amount;
+      return acc;
+    }, { distance: 0, litres: 0, amount: 0 });
+
+    const mileage = totals.litres > 0 ? totals.distance / totals.litres : NaN;
+    const cost = totals.distance > 0 ? totals.amount / totals.distance : NaN;
+
+    el.statEntries.textContent = String(entries.length);
+    el.statDistance.textContent = formatKm(totals.distance);
+    el.statFuel.textContent = amountFmt.format(totals.litres);
+    el.statMileage.textContent = Number.isFinite(mileage) ? amountFmt.format(mileage) : '—';
+    el.statCost.textContent = Number.isFinite(cost) ? amountFmt.format(cost) : '—';
+    el.statAmount.textContent = money(totals.amount);
+  }
+
+  function fuelOptions(selected) {
+    return ['Petrol', 'Diesel'].map((fuel) => `<option value="${fuel}"${fuel === selected ? ' selected' : ''}>${fuel}</option>`).join('');
+  }
+
+  function rowActions() {
+    return `<div class="row-actions">
+      <button class="icon-btn icon-btn--danger" type="button" data-delete title="Delete fill-up" aria-label="Delete fill-up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></svg>
+      </button>
+    </div>`;
+  }
+
+  function fuelPillMarkup(entry) {
+    const fuelClass = entry.fuel === 'Diesel' ? ' fuel-pill--diesel' : '';
+    return `<span class="fuel-pill${fuelClass}"><i aria-hidden="true"></i>${escapeHTML(entry.fuel)}</span>`;
+  }
+
+  function cellClass(key) {
+    if (key === 'date') return 'date-cell';
+    if (key === 'amount') return 'amount';
+    if (key === 'mileage') return 'num mileage';
+    if (key === 'start' || key === 'end' || key === 'price') return 'num';
+    return '';
+  }
+
+  function cellLabel(key) {
+    return {
+      date: 'Date',
+      start: 'Start km',
+      end: 'End km',
+      fuel: 'Fuel',
+      price: 'Price / L',
+      amount: 'Amount'
+    }[key] || key;
+  }
+
+  function cellEditorMarkup(entry, key) {
+    if (key === 'date') {
+      return `<input class="cell-input cell-editor" type="date" data-cell-editor value="${escapeHTML(entry.date)}" max="${todayISO()}" aria-label="Fill-up date">`;
+    }
+    if (key === 'start') {
+      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.start)}" aria-label="Start KM">`;
+    }
+    if (key === 'end') {
+      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.end)}" aria-label="End KM">`;
+    }
+    if (key === 'fuel') {
+      return `<select class="cell-input cell-editor cell-input--fuel" data-cell-editor aria-label="Fuel type">${fuelOptions(entry.fuel)}</select>`;
+    }
+    if (key === 'price') {
+      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.01" min="0" data-cell-editor value="${inputNumber(entry.price)}" aria-label="Price per litre">`;
+    }
+    if (key === 'amount') {
+      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.01" min="0" data-cell-editor value="${inputNumber(entry.amount)}" aria-label="Amount paid">`;
+    }
+    return '';
+  }
+
+  function cellTdMarkup(entry, key, editing = false) {
+    const cls = [cellClass(key), editing ? 'cell-editing' : 'cell-editable'].filter(Boolean).join(' ');
+    const field = cellLabel(key);
+    if (editing) {
+      return `<td class="${cls}" data-cell="${key}" data-label="${field}">${cellEditorMarkup(entry, key)}</td>`;
+    }
+    const label = {
+      date: 'date',
+      start: 'start KM',
+      end: 'end KM',
+      fuel: 'fuel type',
+      price: 'price per litre',
+      amount: 'amount paid'
+    }[key] || key;
+    const valueText = key === 'date'
+      ? formatDate(entry.date)
+      : key === 'start'
+        ? formatKm(entry.start)
+        : key === 'end'
+          ? formatKm(entry.end)
+          : key === 'fuel'
+            ? entry.fuel
+            : key === 'price'
+              ? money(entry.price)
+              : money(entry.amount);
+    const content = key === 'fuel' ? fuelPillMarkup(entry) : escapeHTML(valueText);
+    return `<td class="${cls}" data-cell="${key}" data-label="${field}" tabindex="0" role="button" title="Click to edit ${label}" aria-label="${label}: ${escapeHTML(valueText)}">${content}</td>`;
+  }
+
+  function displayRowMarkup(entry) {
+    const d = derive(entry);
+    const editingKey = editingCell && editingCell.id === entry.id ? editingCell.key : '';
+    return `<tr data-entry-id="${escapeHTML(entry.id)}">
+      ${cellTdMarkup(entry, 'date', editingKey === 'date')}
+      ${cellTdMarkup(entry, 'start', editingKey === 'start')}
+      ${cellTdMarkup(entry, 'end', editingKey === 'end')}
+      <td class="num" data-out="distance" data-label="Distance">${formatKm(d.distance)}</td>
+      ${cellTdMarkup(entry, 'fuel', editingKey === 'fuel')}
+      ${cellTdMarkup(entry, 'price', editingKey === 'price')}
+      <td class="num" data-out="litres" data-label="Litres">${amountFmt.format(d.litres)}</td>
+      <td class="num mileage" data-out="mileage" data-label="Mileage">${amountFmt.format(d.mileage)}</td>
+      <td class="num" data-out="cost" data-label="Cost / km">${amountFmt.format(d.costPerKm)}</td>
+      ${cellTdMarkup(entry, 'amount', editingKey === 'amount')}
+      <td class="act" data-label="Actions">${rowActions()}</td>
+    </tr>`;
+  }
+
+  function draftHasValue(key, value) {
+    if (key === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+    if (key === 'start' || key === 'end' || key === 'price' || key === 'amount') {
+      const raw = String(value == null ? '' : value).trim();
+      return raw !== '' && Number.isFinite(parseInput(raw));
+    }
+    return String(value == null ? '' : value) !== '';
+  }
+
+  function draftDisplayText(key, value) {
+    if (key === 'date') return formatDate(value);
+    if (key === 'fuel') return value === 'Diesel' ? 'Diesel' : 'Petrol';
+    const raw = String(value == null ? '' : value).trim();
+    if (raw === '') return '—';
+    if (key === 'start' || key === 'end') return formatKm(raw);
+    if (key === 'price' || key === 'amount') return money(raw);
+    return raw;
+  }
+
+  function draftEditorMarkup(kind, key, value) {
+    const attr = kind === 'add' ? 'add' : 'older';
+    const label = kind === 'add' ? 'New' : 'Older';
+    if (key === 'date') {
+      return `<input class="cell-input" type="date" data-${attr}="date" value="${escapeHTML(value)}" max="${todayISO()}" aria-label="${label} fill-up date">`;
+    }
+    if (key === 'fuel') {
+      return `<select class="cell-input cell-input--fuel" data-${attr}="fuel" aria-label="${label} fill-up fuel type">${fuelOptions(value)}</select>`;
+    }
+    const config = {
+      start: { step: '0.1', placeholder: kind === 'add' ? '0' : 'Start', label: 'start KM' },
+      end: { step: '0.1', placeholder: kind === 'add' ? '0' : 'End', label: 'end KM' },
+      price: { step: '0.01', placeholder: '0.00', label: 'price per litre' },
+      amount: { step: '0.01', placeholder: '0.00', label: 'amount paid' }
+    }[key];
+    if (!config) return '';
+    return `<input class="cell-input num-input" type="number" inputmode="decimal" step="${config.step}" min="0" data-${attr}="${key}" value="${escapeHTML(value)}" placeholder="${config.placeholder}" aria-label="${label} ${config.label}">`;
+  }
+
+  function draftEditorCellMarkup(kind, key, value) {
+    const cls = ['cell-editing', cellClass(key)].filter(Boolean).join(' ');
+    return `<td class="${cls}" data-draft-editor="${key}" data-draft-kind="${kind}" data-label="${cellLabel(key)}">${draftEditorMarkup(kind, key, value)}</td>`;
+  }
+
+  function draftDisplayCellMarkup(kind, key, value) {
+    const hasValue = key === 'fuel' || draftHasValue(key, value);
+    const text = hasValue ? draftDisplayText(key, value) : '—';
+    const content = key === 'fuel'
+      ? fuelPillMarkup({ fuel: value === 'Diesel' ? 'Diesel' : 'Petrol' })
+      : escapeHTML(text);
+    const cls = ['draft-display-cell', 'cell-editable'];
+    if (!hasValue) cls.push('is-empty');
+    if (key === 'date') cls.push('date-cell');
+    else if (key === 'amount') cls.push('amount');
+    else if (key === 'start' || key === 'end' || key === 'price') cls.push('num');
+    const label = kind === 'add' ? 'New fill-up' : 'Older fill-up';
+    const field = {
+      date: 'date',
+      start: 'start KM',
+      end: 'end KM',
+      fuel: 'fuel type',
+      price: 'price per litre',
+      amount: 'amount paid'
+    }[key] || key;
+    return `<td class="${cls.join(' ')}" data-draft-display="${key}" data-draft-kind="${kind}" data-label="${cellLabel(key)}" tabindex="0" role="button" title="Click to edit ${label.toLowerCase()} ${field}" aria-label="${label} ${field}: ${escapeHTML(text)}">${content}</td>`;
+  }
+
+  function draftCellMarkup(kind, key, draft) {
+    return draftDisplayCellMarkup(kind, key, draft[key]);
+  }
+
+  function openDraftEditor(td) {
+    const kind = td.dataset.draftKind;
+    const key = td.dataset.draftDisplay;
+    const draft = kind === 'add' ? addDraft : olderDraft;
+    if (!draft) return;
+    if (editingCell && !commitCellEditor()) return;
+    if (!td.isConnected) return;
+    const row = td.closest('tr');
+    td.outerHTML = draftEditorCellMarkup(kind, key, draft[key]);
+    const editor = row && row.querySelector(`[data-draft-editor="${key}"] [data-add], [data-draft-editor="${key}"] [data-older]`);
+    if (editor) {
+      editor.focus({ preventScroll: true });
+      revealEditorOnMobile(editor);
+    }
+  }
+
+  function closeDraftEditor(td, { refocus = false, auto = true } = {}) {
+    if (!td || !td.isConnected) return;
+    const kind = td.dataset.draftKind;
+    const key = td.dataset.draftEditor;
+    const draft = kind === 'add' ? addDraft : olderDraft;
+    const input = td.querySelector('[data-add], [data-older]');
+    if (!draft || !input) return;
+    const value = input.value;
+    draft[key] = value;
+    if (kind === 'add') persistDraft();
+    const row = td.closest('tr');
+    td.outerHTML = draftDisplayCellMarkup(kind, key, value);
+    if (auto && kind === 'add' && autoAddIfComplete()) return;
+    if (refocus && row) {
+      const display = row.querySelector(`[data-draft-display="${key}"]`);
+      if (display) display.focus({ preventScroll: true });
+    }
+  }
+
+  function addRowMarkup() {
+    return `<tr class="add-row" id="addRow">
+      ${draftCellMarkup('add', 'date', addDraft)}
+      ${draftCellMarkup('add', 'start', addDraft)}
+      ${draftCellMarkup('add', 'end', addDraft)}
+      <td data-label="Distance"><span class="cell-out" data-out="distance">—</span></td>
+      ${draftCellMarkup('add', 'fuel', addDraft)}
+      ${draftCellMarkup('add', 'price', addDraft)}
+      <td data-label="Litres"><span class="cell-out" data-out="litres">—</span></td>
+      <td data-label="Mileage"><span class="cell-out" data-out="mileage">—</span></td>
+      <td data-label="Cost / km"><span class="cell-out" data-out="cost">—</span></td>
+      ${draftCellMarkup('add', 'amount', addDraft)}
+      <td class="act" data-label="Actions">
+        <div class="add-actions">
+          <button class="add-btn" type="button" data-add-submit title="Add this fill-up to the ledger">Add</button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  function olderCaptionMarkup() {
+    return `<tr class="older-caption-row"><td colspan="11">Older entry — backfill a past fill-up</td></tr>`;
+  }
+
+  function olderRowMarkup() {
+    return `<tr class="older-row" id="olderRow">
+      ${draftCellMarkup('older', 'date', olderDraft)}
+      ${draftCellMarkup('older', 'start', olderDraft)}
+      ${draftCellMarkup('older', 'end', olderDraft)}
+      <td data-label="Distance"><span class="cell-out" data-out="distance">—</span></td>
+      ${draftCellMarkup('older', 'fuel', olderDraft)}
+      ${draftCellMarkup('older', 'price', olderDraft)}
+      <td data-label="Litres"><span class="cell-out" data-out="litres">—</span></td>
+      <td data-label="Mileage"><span class="cell-out" data-out="mileage">—</span></td>
+      <td data-label="Cost / km"><span class="cell-out" data-out="cost">—</span></td>
+      ${draftCellMarkup('older', 'amount', olderDraft)}
+      <td class="act" data-label="Actions">
+        <div class="add-actions">
+          <button class="add-btn add-btn--older" type="button" data-older-submit title="Add this older fill-up">Add</button>
+          <button class="icon-btn" type="button" data-older-cancel title="Close older entry" aria-label="Close older entry">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  function emptyRowMarkup(title, text) {
+    return `<tr class="empty-row"><td colspan="11">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/><path d="M4 21h11M5 10h9"/><path d="M14 7h2.5A1.5 1.5 0 0 1 18 8.5V15a1.5 1.5 0 0 0 3 0V9.5L18.5 7"/></svg>
+        <strong>${escapeHTML(title)}</strong>
+        <span>${escapeHTML(text)}</span>
+      </div>
+    </td></tr>`;
+  }
+
+  function totalsMarkup(entries) {
+    const totals = entries.reduce((acc, entry) => {
+      const d = derive(entry);
+      acc.distance += d.distance;
+      acc.litres += d.litres;
+      acc.amount += entry.amount;
+      return acc;
+    }, { distance: 0, litres: 0, amount: 0 });
+    const mileage = totals.litres > 0 ? totals.distance / totals.litres : NaN;
+    const cost = totals.distance > 0 ? totals.amount / totals.distance : NaN;
+
+    return `<tr>
+      <td colspan="3" class="t-label">Totals</td>
+      <td class="num" data-label="Distance">${formatKm(totals.distance)}</td>
+      <td></td>
+      <td></td>
+      <td class="num" data-label="Litres">${amountFmt.format(totals.litres)}</td>
+      <td class="num" data-label="Mileage">${Number.isFinite(mileage) ? amountFmt.format(mileage) : '—'}</td>
+      <td class="num" data-label="Cost / km">${Number.isFinite(cost) ? amountFmt.format(cost) : '—'}</td>
+      <td class="amount" data-label="Total paid">${money(totals.amount)}</td>
+      <td></td>
+    </tr>`;
+  }
+
+  function renderTable(vehicle, entries) {
+    if (!vehicle) {
+      el.entriesBody.innerHTML = emptyRowMarkup('No vehicle yet', 'Add a vehicle above to open its table.');
+      el.tableFoot.innerHTML = '';
+      return;
+    }
+
+    let rows = '';
+    if (olderOpen) {
+      rows += olderCaptionMarkup();
+      rows += olderRowMarkup();
+    }
+    rows += entries.map(displayRowMarkup).join('');
+    rows += addRowMarkup();
+    el.entriesBody.innerHTML = rows;
+    el.tableFoot.innerHTML = entries.length ? totalsMarkup(entries) : '';
+
+    const addRow = $('#addRow', el.entriesBody);
+    if (addRow) updateRowCalc(addRow);
+    const olderRow = $('#olderRow', el.entriesBody);
+    if (olderRow) updateRowCalc(olderRow);
+  }
+
+  function syncOlderUi() {
+    const hasVehicle = Boolean(currentVehicle());
+    if (!hasVehicle) olderOpen = false;
+    el.olderRowBtn.disabled = !hasVehicle;
+    el.olderRowBtn.setAttribute('aria-expanded', String(olderOpen));
+    el.olderRowBtn.setAttribute('aria-label', olderOpen ? 'Close the older entry row' : 'Add an older fill-up');
+    el.olderRowBtnLabel.textContent = olderOpen ? 'Close older' : 'Older entry';
+    el.olderRowBtn.title = olderOpen ? 'Close the older entry row' : 'Add a fill-up with an older date';
+  }
+
+  function renderAll() {
+    ensureSelection();
+    const vehicle = currentVehicle();
+    const entries = currentEntries();
+    if (!vehicle) {
+      olderOpen = false;
+      editingCell = null;
+    } else if (editingCell && !entries.some((entry) => entry.id === editingCell.id)) {
+      editingCell = null;
+    }
+    if (!addDraft) resetAddDraft();
+    if (!olderDraft) resetOlderDraft();
+    renderVehicleSelect();
+    renderHeading(vehicle, entries);
+    updateStats(vehicle, entries);
+    renderTable(vehicle, entries);
+    syncOlderUi();
+  }
+
+  function rowValue(row, key) {
+    const input = row.querySelector(`[data-add="${key}"], [data-older="${key}"]`);
+    if (input) return input.value;
+    const draft = row.id === 'addRow' ? addDraft : olderDraft;
+    return draft && Object.prototype.hasOwnProperty.call(draft, key) ? draft[key] : null;
+  }
+
+  function setOut(row, key, value) {
+    const node = row.querySelector(`[data-out="${key}"]`);
+    if (node) node.textContent = value;
+  }
+
+  function updateRowCalc(row) {
+    const values = calcValues(
+      rowValue(row, 'start'),
+      rowValue(row, 'end'),
+      rowValue(row, 'price'),
+      rowValue(row, 'amount')
+    );
+    setOut(row, 'distance', Number.isFinite(values.distance) ? formatKm(values.distance) : '—');
+    setOut(row, 'litres', Number.isFinite(values.litres) ? amountFmt.format(values.litres) : '—');
+    setOut(row, 'mileage', Number.isFinite(values.mileage) ? amountFmt.format(values.mileage) : '—');
+    setOut(row, 'cost', Number.isFinite(values.costPerKm) ? amountFmt.format(values.costPerKm) : '—');
+  }
+
+  function readRowDraft(row) {
+    return {
+      date: rowValue(row, 'date'),
+      start: parseInput(rowValue(row, 'start')),
+      end: parseInput(rowValue(row, 'end')),
+      price: parseInput(rowValue(row, 'price')),
+      amount: parseInput(rowValue(row, 'amount')),
+      fuel: rowValue(row, 'fuel') === 'Diesel' ? 'Diesel' : 'Petrol'
+    };
+  }
+
+  function validateDraft(draft) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(draft.date || ''))) {
+      return { key: 'date', message: 'Choose the date of this fill-up.' };
+    }
+    if (!Number.isFinite(draft.start) || draft.start < 0) {
+      return { key: 'start', message: 'Enter a valid starting KM.' };
+    }
+    if (!Number.isFinite(draft.end) || draft.end < 0) {
+      return { key: 'end', message: 'Enter a valid ending KM.' };
+    }
+    if (draft.end <= draft.start) {
+      return { key: 'end', message: 'End KM must be higher than Start KM.' };
+    }
+    if (!Number.isFinite(draft.price) || draft.price <= 0) {
+      return { key: 'price', message: 'Enter a valid price per litre.' };
+    }
+    if (!Number.isFinite(draft.amount) || draft.amount <= 0) {
+      return { key: 'amount', message: 'Enter a valid amount paid.' };
+    }
+    return null;
+  }
+
+  function validateCellValue(entry, key, value) {
+    if (key === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) {
+      return 'Choose the date of this fill-up.';
+    }
+    if (key === 'start') {
+      if (!Number.isFinite(value) || value < 0) return 'Enter a valid starting KM.';
+      if (value >= entry.end) return 'Start KM must be lower than End KM.';
+    }
+    if (key === 'end') {
+      if (!Number.isFinite(value) || value < 0) return 'Enter a valid ending KM.';
+      if (value <= entry.start) return 'End KM must be higher than Start KM.';
+    }
+    if (key === 'price' && (!Number.isFinite(value) || value <= 0)) {
+      return 'Enter a valid price per litre.';
+    }
+    if (key === 'amount' && (!Number.isFinite(value) || value <= 0)) {
+      return 'Enter a valid amount paid.';
+    }
+    return '';
+  }
+
+  function revealEditorOnMobile(editor) {
+    if (!editor || !window.matchMedia || !window.matchMedia('(max-width: 860px)').matches) return;
+    const reveal = () => {
+      try { editor.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch { /* ignore */ }
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(reveal);
+    else reveal();
+  }
+
+  function focusRowField(row, key) {
+    const input = row.querySelector(`[data-add="${key}"], [data-older="${key}"]`);
+    if (input) {
+      input.focus();
+      revealEditorOnMobile(input);
+      return;
+    }
+    const display = row.querySelector(`[data-draft-display="${key}"]`);
+    if (display) openDraftEditor(display);
+  }
+
+  function cellValueFromEditor(key, raw) {
+    if (key === 'date') return String(raw || '');
+    if (key === 'fuel') return raw === 'Diesel' ? 'Diesel' : 'Petrol';
+    return parseInput(raw);
+  }
+
+  function focusCellEditor(selectText = false) {
+    const editor = $('[data-cell-editor]', el.entriesBody);
+    if (!editor) return;
+    editor.focus({ preventScroll: true });
+    if (selectText && editor.tagName === 'INPUT' && editor.type !== 'date' && typeof editor.select === 'function') {
+      try { editor.select(); } catch { /* ignore */ }
+    }
+    revealEditorOnMobile(editor);
+  }
+
+  function updateComputedCells(row, entry) {
+    const d = derive(entry);
+    setOut(row, 'distance', formatKm(d.distance));
+    setOut(row, 'litres', amountFmt.format(d.litres));
+    setOut(row, 'mileage', amountFmt.format(d.mileage));
+    setOut(row, 'cost', amountFmt.format(d.costPerKm));
+  }
+
+  function refreshSummary() {
+    const vehicle = currentVehicle();
+    const entries = currentEntries();
+    renderHeading(vehicle, entries);
+    updateStats(vehicle, entries);
+    el.tableFoot.innerHTML = entries.length ? totalsMarkup(entries) : '';
+  }
+
+  function refreshCellInPlace(entry, key, refocus = false) {
+    const row = $$('tr[data-entry-id]', el.entriesBody).find((tr) => tr.dataset.entryId === entry.id);
+    if (!row) {
+      renderAll();
+      return;
+    }
+    const td = row.querySelector(`td[data-cell="${key}"]`);
+    if (!td) {
+      renderAll();
+      return;
+    }
+    td.outerHTML = cellTdMarkup(entry, key, false);
+    updateComputedCells(row, entry);
+    refreshSummary();
+    if (refocus) {
+      const next = row.querySelector(`td[data-cell="${key}"]`);
+      if (next) next.focus({ preventScroll: true });
+    }
+  }
+
+  function commitCellEditor({ notify = false, refocus = false } = {}) {
+    if (!editingCell) return true;
+    const editor = $('[data-cell-editor]', el.entriesBody);
+    if (!editor || !editor.isConnected) {
+      editingCell = null;
+      renderAll();
+      return true;
+    }
+    const entry = state.entries.find((item) => item.id === editingCell.id);
+    if (!entry) {
+      editingCell = null;
+      renderAll();
+      return true;
+    }
+
+    const key = editingCell.key;
+    const value = cellValueFromEditor(key, editor.value);
+    const problem = validateCellValue(entry, key, value);
+    if (problem) {
+      editor.classList.add('is-invalid');
+      toast(problem);
+      editor.focus({ preventScroll: true });
+      revealEditorOnMobile(editor);
+      return false;
+    }
+
+    const changed = typeof value === 'number'
+      ? Number(entry[key]) !== value
+      : String(entry[key]) !== String(value);
+
+    if (changed) {
+      entry[key] = value;
+      if (key === 'date' || key === 'start') sortVehicleEntries(entry.vehicleId);
+      const vehicle = getVehicle(entry.vehicleId);
+      if (vehicle) vehicle.issuedAt = new Date().toISOString();
+      persist();
+    }
+
+    editingCell = null;
+    refreshCellInPlace(entry, key, refocus);
+    if (notify && changed) toast('Cell updated.');
+    return true;
+  }
+
+  function cancelCellEditor() {
+    if (!editingCell) return;
+    const entry = state.entries.find((item) => item.id === editingCell.id);
+    const key = editingCell.key;
+    editingCell = null;
+    if (entry) refreshCellInPlace(entry, key, true);
+    else renderAll();
+  }
+
+  function openCell(id, key) {
+    if (!EDITABLE_KEYS.includes(key)) return;
+    if (editingCell && editingCell.id === id && editingCell.key === key) {
+      focusCellEditor(true);
+      return;
+    }
+    if (editingCell && !commitCellEditor()) return;
+    const entry = state.entries.find((item) => item.id === id);
+    if (!entry || entry.vehicleId !== selectedVehicleId) return;
+    editingCell = { id, key };
+    renderAll();
+    focusCellEditor(true);
+  }
+
+  function closeOlderRow() {
+    if (!olderOpen) return;
+    if (editingCell && !commitCellEditor()) return;
+    olderOpen = false;
+    resetOlderDraft();
+    renderAll();
+  }
+
+  function openOlderRow() {
+    const vehicle = currentVehicle();
+    if (!vehicle) {
+      toast('Add a vehicle before logging an older fill-up.');
+      showVehiclePanel(true);
+      return;
+    }
+    if (editingCell && !commitCellEditor()) return;
+    olderOpen = true;
+    resetOlderDraft();
+    renderAll();
+    const row = $('#olderRow', el.entriesBody);
+    if (!row) return;
+    focusRowField(row, 'date');
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function toggleOlderRow() {
+    if (olderOpen) closeOlderRow();
+    else openOlderRow();
+  }
+
+  function handleCellBlur(event) {
+    const editor = event.target.closest('[data-cell-editor]');
+    if (!editor || !editor.isConnected) return;
+    commitCellEditor();
+  }
+
+  function handleDraftBlur(event) {
+    const td = event.target.closest('[data-draft-editor]');
+    if (!td) return;
+    if (event.relatedTarget && td.contains(event.relatedTarget)) return;
+    const target = event.relatedTarget;
+    const otherButton = target && typeof target.closest === 'function'
+      && target.closest('button')
+      && !target.closest('[data-add-submit]');
+    closeDraftEditor(td, { auto: !otherButton });
+  }
+
+  function setVehicle(id) {
+    if (!state.vehicles.some((v) => v.id === id)) return;
+    if (editingCell && !commitCellEditor()) {
+      el.vehicleSelect.value = selectedVehicleId;
+      return;
+    }
+    selectedVehicleId = id;
+    state.settings.lastVehicleId = id;
+    editingCell = null;
+    olderOpen = false;
+    resetOlderDraft();
+    resetAddDraft();
+    persist();
+    renderAll();
+  }
+
+  function showVehiclePanel(show, focus = true) {
+    el.newVehiclePanel.hidden = !show;
+    el.addVehicleBtn.setAttribute('aria-expanded', String(show));
+    if (!show) {
+      el.newVehicleError.hidden = true;
+      el.newVehicleName.removeAttribute('aria-invalid');
+      el.newVehicleReg.removeAttribute('aria-invalid');
+    } else if (focus) {
+      setTimeout(() => el.newVehicleName.focus({ preventScroll: true }), 30);
+    }
+  }
+
+  function createVehicle() {
+    if (editingCell && !commitCellEditor()) return;
+    const name = el.newVehicleName.value.trim();
+    const reg = el.newVehicleReg.value.trim();
+
+    if (!name) {
+      el.newVehicleError.textContent = 'Give this vehicle a name first.';
+      el.newVehicleError.hidden = false;
+      el.newVehicleName.setAttribute('aria-invalid', 'true');
+      el.newVehicleName.focus();
+      return;
+    }
+
+    if (state.vehicles.some((v) => v.name.toLowerCase() === name.toLowerCase())) {
+      el.newVehicleError.textContent = 'That vehicle already exists. Pick it from the list.';
+      el.newVehicleError.hidden = false;
+      el.newVehicleName.focus();
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const vehicle = {
+      id: uid(),
+      name: name.slice(0, 40),
+      reg: reg.slice(0, 20),
+      receiptNo: generateReceiptNo(),
+      issuedAt: now
+    };
+    state.vehicles.push(vehicle);
+    selectedVehicleId = vehicle.id;
+    state.settings.lastVehicleId = vehicle.id;
+    editingCell = null;
+    el.newVehicleName.value = '';
+    el.newVehicleReg.value = '';
+    showVehiclePanel(false);
+    olderOpen = false;
+    resetOlderDraft();
+    resetAddDraft();
+    persist();
+    renderAll();
+    toast(`${vehicle.name} added. Fill its first entry in the open line below.`);
+    requestAnimationFrame(() => {
+      const row = $('#addRow', el.entriesBody);
+      if (row) focusRowField(row, 'start');
+    });
+  }
+
+  function autoAddIfComplete() {
+    const row = $('#addRow', el.entriesBody);
+    if (!row) return false;
+    if (validateDraft(readRowDraft(row))) return false;
+    lastAutoAddAt = Date.now();
+    addEntry();
+    return true;
+  }
+
+  function addEntry() {
+    if (editingCell && !commitCellEditor()) return;
+    const vehicle = currentVehicle();
+    if (!vehicle) {
+      toast('Add a vehicle before logging a fill-up.');
+      showVehiclePanel(true);
+      return;
+    }
+    const row = $('#addRow', el.entriesBody);
+    if (!row) return;
+    const draft = readRowDraft(row);
+    const problem = validateDraft(draft);
+    if (problem) {
+      toast(problem.message);
+      focusRowField(row, problem.key);
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const entry = {
+      id: uid(),
+      vehicleId: vehicle.id,
+      date: draft.date,
+      start: draft.start,
+      end: draft.end,
+      price: draft.price,
+      amount: draft.amount,
+      fuel: draft.fuel,
+      createdAt: now
+    };
+    state.entries.push(entry);
+    sortVehicleEntries(vehicle.id);
+    vehicle.issuedAt = now;
+    state.settings.lastVehicleId = vehicle.id;
+    editingCell = null;
+    delete drafts[vehicle.id];
+    resetAddDraft({ useSaved: false });
+    persistDraft();
+    persist();
+    renderAll();
+    toast(`Fill-up added for ${vehicle.name}.`);
+    requestAnimationFrame(() => {
+      const row = $('#addRow', el.entriesBody);
+      if (row) focusRowField(row, 'end');
+    });
+  }
+
+  function addOlderEntry() {
+    if (editingCell && !commitCellEditor()) return;
+    const vehicle = currentVehicle();
+    if (!vehicle) {
+      toast('Add a vehicle before logging an older fill-up.');
+      showVehiclePanel(true);
+      return;
+    }
+    const row = $('#olderRow', el.entriesBody);
+    if (!row) return;
+    const draft = readRowDraft(row);
+    const problem = validateDraft(draft);
+    if (problem) {
+      toast(problem.message);
+      focusRowField(row, problem.key);
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const entry = {
+      id: uid(),
+      vehicleId: vehicle.id,
+      date: draft.date,
+      start: draft.start,
+      end: draft.end,
+      price: draft.price,
+      amount: draft.amount,
+      fuel: draft.fuel,
+      createdAt: now
+    };
+    state.entries.push(entry);
+    sortVehicleEntries(vehicle.id);
+    vehicle.issuedAt = now;
+    state.settings.lastVehicleId = vehicle.id;
+    editingCell = null;
+    if (addDraft.start === '') {
+      const latest = lastEntryFor(vehicle.id);
+      if (latest) {
+        addDraft.start = inputNumber(latest.end);
+        persistDraft();
+      }
+    }
+    olderOpen = false;
+    resetOlderDraft();
+    persist();
+    renderAll();
+    toast(`Older fill-up added for ${vehicle.name}.`);
+  }
+
+  function deleteEntry(id) {
+    const index = state.entries.findIndex((entry) => entry.id === id);
+    if (index < 0) return;
+    const [removed] = state.entries.splice(index, 1);
+    const vehicle = getVehicle(removed.vehicleId);
+    if (vehicle) vehicle.issuedAt = new Date().toISOString();
+    if (editingCell && editingCell.id === id) editingCell = null;
+    persist();
+    renderAll();
+    toast('Fill-up deleted.', 'Undo', () => {
+      state.entries.splice(Math.min(index, state.entries.length), 0, removed);
+      if (vehicle) vehicle.issuedAt = new Date().toISOString();
+      persist();
+      renderAll();
+      toast('Fill-up restored.');
+    });
+  }
+
+  function hideToast() {
+    el.toast.classList.remove('is-visible');
+    clearTimeout(toastTimer);
+  }
+
+  function toast(message, actionLabel = '', action = null) {
+    el.toastMsg.textContent = message;
+    if (actionLabel) {
+      el.toastAction.hidden = false;
+      el.toastAction.textContent = actionLabel;
+      el.toastAction.onclick = () => {
+        hideToast();
+        if (typeof action === 'function') action();
+      };
+    } else {
+      el.toastAction.hidden = true;
+      el.toastAction.onclick = null;
+    }
+    el.toast.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, actionLabel ? 5500 : 2800);
+  }
+
+  function handleTableInput(event) {
+    const editor = event.target.closest('[data-cell-editor]');
+    if (editor && event.type === 'change' && (editor.tagName === 'SELECT' || editor.type === 'date')) {
+      commitCellEditor({ notify: true, refocus: true });
+      return;
+    }
+
+    const row = event.target.closest('tr');
+    if (!row) return;
+
+    if (row.id === 'addRow') {
+      const key = event.target.dataset.add;
+      if (key && Object.prototype.hasOwnProperty.call(addDraft, key)) {
+        addDraft[key] = event.target.value;
+        persistDraft();
+      }
+      updateRowCalc(row);
+      if (event.type === 'change' && (key === 'date' || key === 'fuel')) {
+        closeDraftEditor(event.target.closest('[data-draft-editor]'), { refocus: true });
+      }
+      return;
+    }
+
+    if (row.id === 'olderRow') {
+      const key = event.target.dataset.older;
+      if (key && Object.prototype.hasOwnProperty.call(olderDraft, key)) {
+        olderDraft[key] = event.target.value;
+      }
+      updateRowCalc(row);
+      if (event.type === 'change' && (key === 'date' || key === 'fuel')) {
+        closeDraftEditor(event.target.closest('[data-draft-editor]'), { refocus: true });
+      }
+    }
+  }
+
+  function handleTableClick(event) {
+    if (event.target.closest('[data-add-submit]')) {
+      if (Date.now() - lastAutoAddAt < 300) return;
+      addEntry();
+      return;
+    }
+    if (event.target.closest('[data-older-submit]')) {
+      addOlderEntry();
+      return;
+    }
+    if (event.target.closest('[data-older-cancel]')) {
+      closeOlderRow();
+      return;
+    }
+    const draftDisplay = event.target.closest('[data-draft-display]');
+    if (draftDisplay) {
+      openDraftEditor(draftDisplay);
+      return;
+    }
+    if (event.target.closest('[data-cell-editor]')) return;
+
+    const row = event.target.closest('tr');
+    if (!row) return;
+    if (event.target.closest('[data-delete]')) {
+      if (row.dataset.entryId) deleteEntry(row.dataset.entryId);
+      return;
+    }
+
+    const cell = event.target.closest('td[data-cell]');
+    if (!cell || !row.dataset.entryId) return;
+    openCell(row.dataset.entryId, cell.dataset.cell);
+  }
+
+  function handleTableKeydown(event) {
+    const editor = event.target.closest('[data-cell-editor]');
+    if (editor) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitCellEditor({ notify: true, refocus: true });
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        cancelCellEditor();
+      }
+      return;
+    }
+
+    const draftEditor = event.target.closest('[data-draft-editor]');
+    if (draftEditor && (event.key === 'Escape' || event.key === 'Enter')) {
+      event.preventDefault();
+      closeDraftEditor(draftEditor, { refocus: true, auto: event.key === 'Enter' });
+      return;
+    }
+
+    const row = event.target.closest('tr');
+    if (!row) return;
+
+    const draftDisplay = event.target.closest('[data-draft-display]');
+    if (draftDisplay && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      openDraftEditor(draftDisplay);
+      return;
+    }
+
+    if (event.key === 'Escape' && row.id === 'olderRow') {
+      event.preventDefault();
+      closeOlderRow();
+      return;
+    }
+
+    if (event.key === 'Enter' && !event.target.closest('button')) {
+      if (row.id === 'addRow') {
+        event.preventDefault();
+        addEntry();
+        return;
+      }
+      if (row.id === 'olderRow') {
+        event.preventDefault();
+        addOlderEntry();
+        return;
+      }
+    }
+
+    const cell = event.target.closest('td[data-cell]');
+    if (cell && row.dataset.entryId && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      openCell(row.dataset.entryId, cell.dataset.cell);
+    }
+  }
+
+  function adoptIncomingState({ force = false, adoptSelection = false } = {}) {
+    const incoming = loadState();
+    if (!incoming) return false;
+
+    const sameVehicles = JSON.stringify(incoming.vehicles) === JSON.stringify(state.vehicles);
+    const sameEntries = JSON.stringify(incoming.entries) === JSON.stringify(state.entries);
+    const selectionChanged = Boolean(incoming.settings && incoming.settings.lastVehicleId !== selectedVehicleId);
+
+    if (sameVehicles && sameEntries && !force && !selectionChanged) {
+      state.settings = incoming.settings;
+      return false;
+    }
+
+    const previousVehicleId = selectedVehicleId;
+    const previousVehicleCount = state.vehicles.length;
+    const draft = addDraft;
+    const wasOlderOpen = olderOpen;
+    const older = olderDraft;
+    state = incoming;
+    editingCell = null;
+    if (adoptSelection && incoming.settings && state.vehicles.some((v) => v.id === incoming.settings.lastVehicleId)) {
+      selectedVehicleId = incoming.settings.lastVehicleId;
+    }
+    ensureSelection();
+    if (previousVehicleCount === 0 && state.vehicles.length > 0) showVehiclePanel(false);
+
+    if (!draft || selectedVehicleId !== previousVehicleId) resetAddDraft();
+    else addDraft = draft;
+
+    if (wasOlderOpen && older && selectedVehicleId === previousVehicleId) {
+      olderOpen = true;
+      olderDraft = older;
+    } else {
+      olderOpen = false;
+      resetOlderDraft();
+    }
+
+    renderAll();
+    return true;
+  }
+
+  function bindEvents() {
+    el.vehicleSelect.addEventListener('change', () => setVehicle(el.vehicleSelect.value));
+    el.addVehicleBtn.addEventListener('click', () => showVehiclePanel(el.newVehiclePanel.hidden));
+    el.createVehicleBtn.addEventListener('click', createVehicle);
+    el.cancelVehicleBtn.addEventListener('click', () => showVehiclePanel(false));
+
+    [el.newVehicleName, el.newVehicleReg].forEach((input) => {
+      input.addEventListener('input', () => {
+        el.newVehicleError.hidden = true;
+        input.removeAttribute('aria-invalid');
+      });
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          createVehicle();
+        }
+      });
+    });
+
+    el.olderRowBtn.addEventListener('click', () => toggleOlderRow());
+
+    el.entriesBody.addEventListener('input', handleTableInput);
+    el.entriesBody.addEventListener('change', handleTableInput);
+    el.entriesBody.addEventListener('click', handleTableClick);
+    el.entriesBody.addEventListener('keydown', handleTableKeydown);
+    el.entriesBody.addEventListener('focusout', handleCellBlur);
+    el.entriesBody.addEventListener('focusout', handleDraftBlur);
+    window.addEventListener('beforeprint', hideToast);
+
+    window.addEventListener('storage', (event) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      const wasEditing = Boolean(editingCell);
+      const active = document.body.classList.contains('view-table');
+      if (adoptIncomingState() && active) {
+        toast(wasEditing
+          ? 'Ledger updated. The open cell editor was closed.'
+          : 'Ledger updated from the receipt view.');
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (!document.hidden && !editingCell) adoptIncomingState();
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      adoptIncomingState();
+    });
+  }
+
+  function flushTableEditors() {
+    if (editingCell && !commitCellEditor()) cancelCellEditor();
+    const draftEditors = $$('[data-draft-editor]', el.entriesBody);
+    draftEditors.forEach((editor) => closeDraftEditor(editor, { auto: false }));
+  }
+
+  function reloadView() {
+    state = loadState() || createState();
+    drafts = loadDrafts();
+    editingCell = null;
+    olderOpen = false;
+    lastAutoAddAt = 0;
+    selectedVehicleId = state.settings.lastVehicleId || '';
+    ensureSelection();
+    resetOlderDraft();
+    resetAddDraft();
+    renderAll();
+    if (state.vehicles.length === 0) showVehiclePanel(true, false);
+    else showVehiclePanel(false);
+  }
+
+  window.mileageTable = {
+    syncView: () => { if (state) adoptIncomingState({ force: true, adoptSelection: true }); },
+    flush: flushTableEditors,
+    reload: reloadView
+  };
+
+  function init() {
+    state = loadState() || createState();
+    drafts = loadDrafts();
+    selectedVehicleId = state.settings.lastVehicleId || '';
+    ensureSelection();
+    resetAddDraft();
+    resetOlderDraft();
+    renderAll();
+    bindEvents();
+    if (state.vehicles.length === 0) showVehiclePanel(true, false);
+    persist();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const BASE_TITLE = 'Mileage Receipt — fuel & distance log';
+  const tableStyles = document.getElementById('tableStyles');
+  const receiptView = document.getElementById('receiptView');
+  const tableView = document.getElementById('tableView');
+  const brandView = document.getElementById('brandView');
+  const links = Array.from(document.querySelectorAll('[data-view-link]'));
+  const STORAGE_KEY = 'mileage-receipt.v1';
+  const DRAFT_KEY = 'mileage-receipt.table-draft.v1';
+  const exportButtons = Array.from(document.querySelectorAll('[data-export-json]'));
+  const importButtons = Array.from(document.querySelectorAll('[data-import-json]'));
+  const importInput = document.getElementById('importJsonInput');
+
+  function normalize(view) {
+    return view === 'table' ? 'table' : 'receipt';
+  }
+
+  function initialView() {
+    const hash = String(location.hash || '').replace(/^#/, '').toLowerCase();
+    if (hash === 'table' || hash === 'receipt') return hash;
+    return 'table';
+  }
+
+  function setView(view) {
+    view = normalize(view);
+    const isTable = view === 'table';
+
+    receiptView.hidden = isTable;
+    tableView.hidden = !isTable;
+    if (tableStyles) tableStyles.media = isTable ? 'all' : 'not all';
+    document.body.classList.toggle('view-table', isTable);
+    document.body.classList.toggle('view-receipt', !isTable);
+    if (brandView) brandView.textContent = isTable ? 'Table' : 'Receipt';
+    const toast = document.getElementById('toast');
+    if (toast) toast.classList.remove('is-visible');
+
+    links.forEach((link) => {
+      if (link.dataset.viewLink === view) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+
+    if (isTable) {
+      if (window.mileageTable && typeof window.mileageTable.syncView === 'function') {
+        window.mileageTable.syncView();
+      }
+      const title = document.getElementById('tLedgerTitle');
+      document.title = title && title.textContent && title.textContent !== 'No vehicle selected'
+        ? `${title.textContent} Table — Mileage Receipt`
+        : 'Fill-up Table — Mileage Receipt';
+    } else {
+      if (window.mileageTable && typeof window.mileageTable.flush === 'function') {
+        window.mileageTable.flush();
+      }
+      if (window.mileageReceipt && typeof window.mileageReceipt.syncView === 'function') {
+        window.mileageReceipt.syncView();
+      }
+      document.title = BASE_TITLE;
+    }
+  }
+
+  function formatCount(count, singular, plural) {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  function emptyLedger() {
+    return { version: 1, vehicles: [], entries: [], settings: { lastVehicleId: '' } };
+  }
+
+  function notify(message, actionLabel = '', action = null) {
+    const receipt = window.mileageReceipt;
+    if (receipt && typeof receipt.notify === 'function') {
+      receipt.notify(message, actionLabel, action);
+      return;
+    }
+    const box = document.getElementById('toast');
+    const label = document.getElementById('toastMsg');
+    const button = document.getElementById('toastAction');
+    if (!box || !label) return;
+    label.textContent = message;
+    if (button && actionLabel && typeof action === 'function') {
+      button.hidden = false;
+      button.textContent = actionLabel;
+      button.onclick = () => {
+        button.hidden = true;
+        button.onclick = null;
+        action();
+      };
+    } else if (button) {
+      button.hidden = true;
+      button.onclick = null;
+    }
+    box.classList.add('is-visible');
+  }
+
+  function syncLedgerViews() {
+    if (window.mileageTable && typeof window.mileageTable.reload === 'function') {
+      window.mileageTable.reload();
+    } else if (window.mileageTable && typeof window.mileageTable.syncView === 'function') {
+      window.mileageTable.syncView();
+    }
+    if (window.mileageReceipt && typeof window.mileageReceipt.syncView === 'function') {
+      window.mileageReceipt.syncView();
+    }
+    if (window.mileageReceipt && typeof window.mileageReceipt.resetForm === 'function') {
+      window.mileageReceipt.resetForm();
+    }
+  }
+
+  function exportLedger() {
+    let parsed = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch {
+      notify('The saved ledger could not be read, so nothing was exported.');
+      return;
+    }
+
+    let ledger;
+    if (parsed) {
+      const normalize = window.mileageReceipt && window.mileageReceipt.normalizeState;
+      ledger = typeof normalize === 'function' ? normalize(parsed) : null;
+      if (!ledger) {
+        notify('The saved ledger is not in a format this page can export.');
+        return;
+      }
+    } else {
+      ledger = emptyLedger();
+    }
+
+    const payload = {
+      app: 'mileage-receipt',
+      exportedAt: new Date().toISOString(),
+      ...ledger
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const now = new Date();
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    link.href = url;
+    link.download = `mileage-ledger-${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    notify(`Exported ${formatCount(ledger.vehicles.length, 'vehicle', 'vehicles')} and ${formatCount(ledger.entries.length, 'fill-up', 'fill-ups')}.`);
+  }
+
+  async function handleImportFile(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      notify('That file is too large to import (5 MB maximum).');
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      notify('That file is not valid JSON.');
+      return;
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      notify('That JSON file does not contain a ledger.');
+      return;
+    }
+    if (parsed.app && parsed.app !== 'mileage-receipt') {
+      notify('That JSON file is not a Mileage Receipt backup.');
+      return;
+    }
+
+    const normalize = window.mileageReceipt && window.mileageReceipt.normalizeState;
+    const imported = typeof normalize === 'function' ? normalize(parsed) : null;
+    if (!imported) {
+      notify('That JSON file does not contain a valid ledger.');
+      return;
+    }
+
+    const vehicleCount = imported.vehicles.length;
+    const entryCount = imported.entries.length;
+    let previousRaw = null;
+    let previousDrafts = null;
+    let currentHasData = false;
+
+    try {
+      previousRaw = localStorage.getItem(STORAGE_KEY);
+      previousDrafts = localStorage.getItem(DRAFT_KEY);
+    } catch {
+      previousRaw = null;
+      previousDrafts = null;
+    }
+    if (previousRaw) {
+      try {
+        const current = JSON.parse(previousRaw);
+        currentHasData = Boolean(
+          (Array.isArray(current.vehicles) && current.vehicles.length)
+          || (Array.isArray(current.entries) && current.entries.length)
+        );
+      } catch {
+        currentHasData = true;
+        previousRaw = null;
+      }
+    }
+    if (!currentHasData && previousDrafts) {
+      try {
+        const drafts = JSON.parse(previousDrafts);
+        currentHasData = Boolean(drafts && typeof drafts === 'object' && Object.keys(drafts).length);
+      } catch {
+        /* an unreadable draft should not block a deliberate import */
+      }
+    }
+
+    if (currentHasData) {
+      const confirmed = window.confirm(
+        `Import ${formatCount(vehicleCount, 'vehicle', 'vehicles')} and ${formatCount(entryCount, 'fill-up', 'fill-ups')}?\n\nThis replaces the current ledger everywhere it is synced.`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      notify('The imported ledger could not be saved. Nothing was changed.');
+      return;
+    }
+
+    syncLedgerViews();
+    notify(
+      `Imported ${formatCount(vehicleCount, 'vehicle', 'vehicles')} and ${formatCount(entryCount, 'fill-up', 'fill-ups')}.`,
+      'Undo',
+      () => {
+        try {
+          if (previousRaw == null) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyLedger()));
+          } else {
+            localStorage.setItem(STORAGE_KEY, previousRaw);
+          }
+          if (previousDrafts == null) localStorage.removeItem(DRAFT_KEY);
+          else localStorage.setItem(DRAFT_KEY, previousDrafts);
+        } catch {
+          notify('The import could not be undone.');
+          return;
+        }
+        syncLedgerViews();
+        notify('Import undone.');
+      }
+    );
+  }
+
+  function bindDataActions() {
+    exportButtons.forEach((button) => button.addEventListener('click', exportLedger));
+    importButtons.forEach((button) => button.addEventListener('click', () => {
+      if (!importInput) return;
+      importInput.value = '';
+      importInput.click();
+    }));
+    if (importInput) importInput.addEventListener('change', handleImportFile);
+  }
+
+  links.forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const view = normalize(link.dataset.viewLink);
+      try {
+        history.replaceState(null, '', `#${view}`);
+      } catch {
+        location.hash = view;
+      }
+      setView(view);
+    });
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = String(location.hash || '').replace(/^#/, '').toLowerCase();
+    if (hash === 'table' || hash === 'receipt') setView(hash);
+  });
+
+  function boot() {
+    setView(initialView());
+  }
+
+  bindDataActions();
+
+  if (document.readyState === 'loading') {
+    // Apply the initial view before the first paint so the page lands on the
+    // requested view without flashing the receipt first.
+    setView(initialView());
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+</script>
+<!-- Optional D1 sync. Without /api/ledger the site stays local-only. -->
+<script defer src="./cloud.js"></script>
+</body>
+</html>
