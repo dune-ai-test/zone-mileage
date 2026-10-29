@@ -146,8 +146,10 @@ Pages project → **Custom domains** → **Set up a domain**, then add the DNS r
 - Writes are debounced by ~0.5s, then PUT to `/api/ledger`. D1 is the shared copy; `localStorage` remains the offline cache.
 - The browser checks for newer D1 versions on page load, on focus/wake, and every 20 seconds. It never pulls while you are editing a cell.
 - If a save fails, the pill shows **D1 offline** and the local change is marked dirty. It is retried every 15 seconds and again on the next page load, so an offline edit is not silently replaced by an older D1 copy.
+- A blank D1 ledger never overwrites a populated local ledger; the local copy is uploaded instead. This makes linking D1 after using the site safe.
 - Across devices the last successful write wins. Take an **Export** before importing a backup or making a large batch of changes.
 - The first visit to a brand-new Pages project uploads the browser's existing ledger. On a second browser, an existing D1 ledger takes precedence over that browser's local copy — export first if both copies matter.
+- If the first check fails because the network is down, the pill shows **Local only** for that moment; focusing the page or coming back online retries the check, and edits made meanwhile stay marked for upload.
 
 ## Notes
 

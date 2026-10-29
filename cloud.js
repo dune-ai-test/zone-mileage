@@ -31,6 +31,8 @@
 
   let booting = true;
   let booted = false;
+  let initializing = false;
+  let apiPresent = null; // true | false | unknown
   let mode = 'local'; // 'd1' | 'local'
   let version = 0;
   let updatedAt = 0;
@@ -354,6 +356,7 @@
   }
 
   function finishBoot() {
+    initializing = false;
     booting = false;
     booted = true;
     paintStatus();
@@ -369,6 +372,9 @@
   }
 
   async function initialLoad() {
+    if (initializing) return;
+    initializing = true;
+
     const localRaw = readLocal();
     const localData = parseLedger(localRaw);
     const localDirty = readDirty();
@@ -391,11 +397,14 @@
     }
 
     if (!isApiResponse(response)) {
+      apiPresent = false;
       mode = 'local';
       setStatus('local', 'Local only', 'This host has no D1 API. Data stays in this browser.');
       finishBoot();
       return;
     }
+
+    apiPresent = true;
 
     if (response.status === 404) {
       mode = 'd1';
@@ -440,13 +449,29 @@
 
     mode = 'd1';
 
-    // Never overwrite edits that failed to upload from a previous session.
-    if (localData && localDirty) {
-      setStatus('saving', 'Saving', 'Uploading unsynced local changes...');
+    const remoteEmpty = !body.data.vehicles.length && !body.data.entries.length;
+    const localHasData = Boolean(
+      localData && (localData.vehicles.length || localData.entries.length)
+    );
+
+    // Never overwrite edits that failed to upload from a previous session,
+    // and never let a blank D1 row wipe a populated local ledger.
+    if (localData && (localDirty || (remoteEmpty && localHasData))) {
+      setStatus(
+        'saving',
+        'Saving',
+        localDirty ? 'Uploading unsynced local changes...' : 'Copying the local ledger to D1...'
+      );
       const result = await send(JSON.stringify(localData));
       if (result.ok) {
         markDirty(false);
-        setStatus('synced', 'D1 synced', 'Unsynced local changes were uploaded to D1.');
+        setStatus(
+          'synced',
+          'D1 synced',
+          localDirty
+            ? 'Unsynced local changes were uploaded to D1.'
+            : 'The local ledger replaced the empty D1 copy.'
+        );
       } else {
         setStatus('offline', 'D1 offline', result.message);
       }
@@ -465,6 +490,12 @@
   }
 
   function onWake() {
+    // The first check may have failed because the network was down; retry
+    // detection on wake instead of staying local-only for the whole session.
+    if (mode === 'local' && apiPresent !== false) {
+      initialLoad();
+      return;
+    }
     flushPending();
     refreshFromD1();
   }
@@ -478,6 +509,9 @@
       && this === window.localStorage
       && key === STORAGE_KEY
     ) {
+      // A failed D1 API is not the same as a host without one: keep edits
+      // marked so a later online visit uploads them instead of losing them.
+      if (apiPresent !== false) markDirty(true);
       queuePush(String(value));
     }
     return result;
