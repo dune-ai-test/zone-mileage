@@ -696,6 +696,8 @@ a{color:inherit}
 .cloud-pill[data-state="offline"] .cloud-dot,.cloud-pill[data-state="local"] .cloud-dot{background:#b34524}
 @keyframes cloudPulse{0%,100%{opacity:1}50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.cloud-dot{animation:none!important}}
+.pending-tag{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.entry .pending-tag{font-size:7.5px;letter-spacing:.1em}
 .site-nav{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid rgba(28,26,21,.14);border-radius:999px;background:rgba(255,255,255,.28);backdrop-filter:blur(5px)}
 .site-nav a{padding:7px 13px;border-radius:999px;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;color:var(--muted);transition:background .15s,color .15s;white-space:nowrap}
 .site-nav a:hover{color:var(--ink);background:rgba(255,255,255,.5)}
@@ -825,12 +827,12 @@ body.view-table .btn-primary{flex:none}
               <p class="field-help" id="startHelp">Choose a vehicle first.</p>
             </div>
             <div class="field">
-              <label class="field-label" for="endKm">End KM <span class="field-tag">closing</span></label>
+              <label class="field-label" for="endKm">End KM <span class="field-tag">optional</span></label>
               <div class="input-box">
-                <input id="endKm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 12412" autocomplete="off">
+                <input id="endKm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="leave blank" autocomplete="off">
                 <span class="affix suffix">km</span>
               </div>
-              <p class="field-help" id="endHelp">Distance is calculated for you.</p>
+              <p class="field-help" id="endHelp">Leave blank — the next fill-up's Start KM closes this entry.</p>
             </div>
           </div>
         </div>
@@ -1019,7 +1021,7 @@ body.view-table .btn-primary{flex:none}
         <strong class="stat-value"><span id="tStatDistance">—</span><span class="unit">km</span></strong>
       </article>
       <article class="stat">
-        <span class="stat-label">Fuel used</span>
+        <span class="stat-label">Fuel bought</span>
         <strong class="stat-value"><span id="tStatFuel">—</span><span class="unit">L</span></strong>
       </article>
       <article class="stat">
@@ -1064,7 +1066,7 @@ body.view-table .btn-primary{flex:none}
             <tr>
               <th scope="col">Date</th>
               <th scope="col" class="num">Start km</th>
-              <th scope="col" class="num">End km</th>
+              <th scope="col" class="num" title="Auto from the next fill-up unless you type one">End km</th>
               <th scope="col" class="num">Km</th>
               <th scope="col">Fuel</th>
               <th scope="col" class="num">Price/L</th>
@@ -1082,14 +1084,14 @@ body.view-table .btn-primary{flex:none}
 
       <p class="table-note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.1"/></svg>
-        <span>The new fill-up line at the bottom stays open and is saved as a draft — add the end KM after your trip and the line is added automatically once complete. Use Older entry to backfill a past fill-up. Tap or click any cell to edit it; Enter or tap away saves, Esc cancels.</span>
+        <span>At the pump, enter today's odometer as Start km and leave End km blank. The next fill-up's Start km closes this entry and works out its Km/L; the newest entry stays <strong>Pending</strong> until then. Type an End km only when you want to override that. Use Older entry to backfill a past fill-up; tap or click any cell to edit it, Enter or tap away saves, Esc cancels.</span>
       </p>
     </section>
   </div>
   </div>
 
   <footer class="page-footer">
-    <span>Saved only in this browser</span>
+    <span>Saved in this browser · syncs to D1 when connected</span>
     <span class="foot-dot" aria-hidden="true">·</span>
     <span>Receipt &amp; table share one ledger</span>
   </footer>
@@ -1239,6 +1241,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function inputNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return '';
     const n = Number(value);
     if (!Number.isFinite(n)) return '';
     return String(Math.round(n * 100) / 100);
@@ -1295,20 +1298,23 @@ body.view-table .btn-primary{flex:none}
       const entries = data.entries
         .filter((e) => e && ids.has(String(e.vehicleId))
           && Number.isFinite(Number(e.start)) && Number(e.start) >= 0
-          && Number.isFinite(Number(e.end)) && Number(e.end) > Number(e.start)
           && Number.isFinite(Number(e.price)) && Number(e.price) > 0
           && Number.isFinite(Number(e.amount)) && Number(e.amount) > 0)
-        .map((e) => ({
-          id: e.id ? String(e.id) : uid(),
-          vehicleId: String(e.vehicleId),
-          date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
-          start: Number(e.start),
-          end: Number(e.end),
-          price: Number(e.price),
-          amount: Number(e.amount),
-          fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
-          createdAt: e.createdAt || new Date().toISOString()
-        }));
+        .map((e) => {
+          const start = Number(e.start);
+          const endRaw = e.end == null || e.end === '' ? NaN : Number(e.end);
+          return {
+            id: e.id ? String(e.id) : uid(),
+            vehicleId: String(e.vehicleId),
+            date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
+            start,
+            end: Number.isFinite(endRaw) && endRaw > start ? endRaw : null,
+            price: Number(e.price),
+            amount: Number(e.amount),
+            fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
+            createdAt: e.createdAt || new Date().toISOString()
+          };
+        });
 
       const wanted = data.settings && data.settings.lastVehicleId;
       const lastVehicleId = vehicles.some((v) => v.id === wanted) ? wanted : (vehicles[0]?.id || '');
@@ -1376,12 +1382,46 @@ body.view-table .btn-primary{flex:none}
     return latest;
   }
 
-  function derive(entry) {
-    const distance = Math.max(0, entry.end - entry.start);
+  function derive(entry, nextStart) {
+    const explicit = entry.end != null && Number.isFinite(Number(entry.end)) && Number(entry.end) > entry.start
+      ? Number(entry.end)
+      : null;
+    const chained = nextStart != null && Number.isFinite(Number(nextStart)) && Number(nextStart) > entry.start
+      ? Number(nextStart)
+      : null;
+    const end = explicit != null ? explicit : chained;
+    const pending = end == null;
+    const distance = pending ? 0 : end - entry.start;
     const litres = entry.price > 0 ? entry.amount / entry.price : 0;
-    const mileage = litres > 0 ? distance / litres : 0;
-    const costPerKm = distance > 0 ? entry.amount / distance : 0;
-    return { distance, litres, mileage, costPerKm };
+    const mileage = !pending && litres > 0 ? distance / litres : 0;
+    const costPerKm = !pending && distance > 0 ? entry.amount / distance : 0;
+    return { end, pending, distance, litres, mileage, costPerKm };
+  }
+
+  function summarizeEntries(entries) {
+    const totals = {
+      distance: 0,
+      litres: 0,
+      amount: 0,
+      completedLitres: 0,
+      completedAmount: 0
+    };
+
+    entries.forEach((entry, index) => {
+      const next = entries[index + 1];
+      const d = derive(entry, next ? next.start : null);
+      totals.distance += d.distance;
+      totals.litres += d.litres;
+      totals.amount += entry.amount;
+      if (!d.pending) {
+        totals.completedLitres += d.litres;
+        totals.completedAmount += entry.amount;
+      }
+    });
+
+    totals.mileage = totals.completedLitres > 0 ? totals.distance / totals.completedLitres : NaN;
+    totals.costPerKm = totals.distance > 0 ? totals.completedAmount / totals.distance : NaN;
+    return totals;
   }
 
   function getFuel() {
@@ -1430,7 +1470,7 @@ body.view-table .btn-primary{flex:none}
 
   function applyVehicleDefaults(vehicleId) {
     const last = lastEntryFor(vehicleId);
-    el.startKm.value = last ? inputNumber(last.end) : '';
+    el.startKm.value = last && last.end != null ? inputNumber(last.end) : '';
     el.price.value = last ? inputNumber(last.price) : '';
     el.endKm.value = '';
     el.amount.value = '';
@@ -1456,22 +1496,38 @@ body.view-table .btn-primary{flex:none}
       return;
     }
 
+    const pending = last.end == null;
+    const lastReading = pending ? last.start : last.end;
     const raw = el.startKm.value.trim();
     const value = Number(raw);
+
     if (raw === '') {
-      el.startHelp.textContent = `Last reading: ${formatKm(last.end)} km.`;
+      el.startHelp.textContent = `Last reading: ${formatKm(lastReading)} km.`;
       return;
     }
-    if (Number.isFinite(value) && Math.abs(value - last.end) < 0.005) {
-      el.startHelp.textContent = `Continues from ${formatKm(last.end)} km.`;
+    if (Number.isFinite(value) && Math.abs(value - lastReading) < 0.005) {
+      el.startHelp.textContent = pending
+        ? `Enter a reading higher than ${formatKm(lastReading)} km to close the previous fill-up.`
+        : `Continues from ${formatKm(lastReading)} km.`;
+      if (pending) el.startHelp.classList.add('is-warn');
       return;
     }
-    el.startHelp.textContent = `Last reading ${formatKm(last.end)} km — this doesn't continue from it.`;
+    if (Number.isFinite(value) && value > lastReading) {
+      el.startHelp.textContent = pending
+        ? `This closes the previous fill-up at ${formatKm(value)} km.`
+        : `Last reading ${formatKm(lastReading)} km — odometer advanced ${formatKm(value - lastReading)} km.`;
+      return;
+    }
+    el.startHelp.textContent = `Last reading ${formatKm(lastReading)} km — this doesn't continue from it.`;
     el.startHelp.classList.add('is-warn');
   }
 
   function updateEndHelp(distance, start, end) {
     el.endHelp.classList.remove('is-warn');
+    if (!Number.isFinite(end)) {
+      el.endHelp.textContent = "Optional — the next fill-up's Start KM closes this entry.";
+      return;
+    }
     if (Number.isFinite(distance) && distance > 0) {
       el.endHelp.textContent = `Distance: ${formatKm(distance)} km.`;
       return;
@@ -1481,7 +1537,7 @@ body.view-table .btn-primary{flex:none}
       el.endHelp.classList.add('is-warn');
       return;
     }
-    el.endHelp.textContent = 'Distance is calculated for you.';
+    el.endHelp.textContent = "Optional — the next fill-up's Start KM closes this entry.";
   }
 
   function updateVehicleMeta() {
@@ -1491,12 +1547,13 @@ body.view-table .btn-primary{flex:none}
       return;
     }
     const entries = state.entries.filter((entry) => entry.vehicleId === vehicleId);
-    const last = entries[entries.length - 1];
+    const last = lastEntryFor(vehicleId);
     if (!last) {
       el.vehicleMeta.textContent = 'No readings yet for this vehicle.';
       return;
     }
-    el.vehicleMeta.textContent = `${entries.length} ${entries.length === 1 ? 'fill-up' : 'fill-ups'} · last at ${formatKm(last.end)} km`;
+    const lastReading = last.end == null ? last.start : last.end;
+    el.vehicleMeta.textContent = `${entries.length} ${entries.length === 1 ? 'fill-up' : 'fill-ups'} · last reading ${formatKm(lastReading)} km`;
   }
 
   function updateCalc() {
@@ -1554,43 +1611,36 @@ body.view-table .btn-primary{flex:none}
     resetClearButton();
   }
 
-  function entryMarkup(entry) {
+  function entryMarkup(entry, nextStart) {
     const vehicle = getVehicle(entry.vehicleId);
-    const d = derive(entry);
+    const d = derive(entry, nextStart);
     const isNew = entry.id === newEntryId ? ' entry--new' : '';
     const name = vehicle ? vehicle.name : 'Vehicle';
-    const details = `${entry.fuel} · ${formatDate(entry.date)} · ${formatKm(entry.start)} → ${formatKm(entry.end)} km · ${amountFmt.format(d.litres)} L @ ${money(entry.price)}/L`;
+    const endText = d.pending ? '<span class="pending-tag">Pending</span>' : formatKm(d.end);
+    const details = `${entry.fuel} · ${formatDate(entry.date)} · ${formatKm(entry.start)} → ${d.pending ? 'pending' : `${formatKm(d.end)} km`} · ${amountFmt.format(d.litres)} L @ ${money(entry.price)}/L`;
 
     return `<article class="entry${isNew}" data-entry-id="${escapeHTML(entry.id)}" title="${escapeHTML(details)}">
       <span class="cell cell-date" data-label="Date">${formatShortDate(entry.date)}</span>
       <span class="cell" data-label="Start km">${formatKm(entry.start)}</span>
-      <span class="cell" data-label="End km">${formatKm(entry.end)}</span>
-      <span class="cell" data-label="Km">${formatKm(d.distance)}</span>
-      <span class="cell entry-mileage" data-label="Km/L">${amountFmt.format(d.mileage)}</span>
-      <span class="cell" data-label="₹/Km">${amountFmt.format(d.costPerKm)}</span>
+      <span class="cell" data-label="End km">${endText}</span>
+      <span class="cell" data-label="Km">${d.pending ? '—' : formatKm(d.distance)}</span>
+      <span class="cell entry-mileage" data-label="Km/L">${d.pending ? '—' : amountFmt.format(d.mileage)}</span>
+      <span class="cell" data-label="₹/Km">${d.pending ? '—' : amountFmt.format(d.costPerKm)}</span>
       <span class="cell entry-amount" data-label="Amount">${money(entry.amount)}</span>
       <button class="entry-void" type="button" data-void="${escapeHTML(entry.id)}" aria-label="Void this entry for ${escapeHTML(name)}" title="Void this entry">×</button>
     </article>`;
   }
 
   function summaryMarkup() {
-    const entries = currentEntries();
-    const totals = entries.reduce((acc, entry) => {
-      const d = derive(entry);
-      acc.distance += d.distance;
-      acc.litres += d.litres;
-      acc.amount += entry.amount;
-      return acc;
-    }, { distance: 0, litres: 0, amount: 0 });
-
-    const mileage = totals.litres > 0 ? totals.distance / totals.litres : 0;
-    const costPerKm = totals.distance > 0 ? totals.amount / totals.distance : 0;
+    const totals = summarizeEntries(currentEntries());
+    const mileage = totals.mileage;
+    const costPerKm = totals.costPerKm;
 
     return `<div class="rcpt-rule" aria-hidden="true">* * * * * * * * * * * * * * * * * * * * * * * * *</div>
       <div class="total-row"><span class="t-key">Total distance</span><span class="t-val">${formatKm(totals.distance)} km</span></div>
       <div class="total-row"><span class="t-key">Total fuel</span><span class="t-val">${amountFmt.format(totals.litres)} L</span></div>
-      <div class="total-row"><span class="t-key">Average mileage</span><span class="t-val accent">${amountFmt.format(mileage)} km/L</span></div>
-      <div class="total-row"><span class="t-key">Average cost / km</span><span class="t-val">${money(costPerKm)}</span></div>
+      <div class="total-row"><span class="t-key">Average mileage</span><span class="t-val accent">${Number.isFinite(mileage) ? amountFmt.format(mileage) : '—'} km/L</span></div>
+      <div class="total-row"><span class="t-key">Average cost / km</span><span class="t-val">${Number.isFinite(costPerKm) ? money(costPerKm) : '—'}</span></div>
       <div class="grand-total"><span class="g-key">Total paid</span><span class="g-val">${money(totals.amount)}</span></div>`;
   }
 
@@ -1669,7 +1719,9 @@ body.view-table .btn-primary{flex:none}
       el.rcptSummary.innerHTML = '';
     } else {
       el.itemsHead.hidden = false;
-      el.rcptEntries.innerHTML = entries.map(entryMarkup).join('');
+      el.rcptEntries.innerHTML = entries
+      .map((entry, index) => entryMarkup(entry, entries[index + 1] ? entries[index + 1].start : null))
+      .join('');
       el.rcptSummary.hidden = false;
       el.rcptSummary.innerHTML = summaryMarkup();
     }
@@ -1769,7 +1821,8 @@ body.view-table .btn-primary{flex:none}
     }
 
     const start = readNumber(el.startKm);
-    const end = readNumber(el.endKm);
+    const endRaw = el.endKm.value.trim();
+    const end = endRaw === '' ? null : readNumber(el.endKm);
     const price = readNumber(el.price);
     const amount = readNumber(el.amount);
 
@@ -1777,11 +1830,11 @@ body.view-table .btn-primary{flex:none}
       showFormError('Enter the starting odometer reading.', el.startKm);
       return;
     }
-    if (!Number.isFinite(end) || end < 0) {
-      showFormError('Enter the ending odometer reading.', el.endKm);
+    if (end != null && (!Number.isFinite(end) || end < 0)) {
+      showFormError('Enter a valid ending odometer reading, or leave it blank.', el.endKm);
       return;
     }
-    if (end <= start) {
+    if (end != null && end <= start) {
       showFormError('End KM must be higher than Start KM.', el.endKm);
       return;
     }
@@ -1816,7 +1869,7 @@ body.view-table .btn-primary{flex:none}
     const vehicle = getVehicle(vehicleId);
     if (vehicle) vehicle.issuedAt = entry.createdAt;
     const latest = lastEntryFor(vehicleId);
-    el.startKm.value = latest ? inputNumber(latest.end) : '';
+    el.startKm.value = latest && latest.end != null ? inputNumber(latest.end) : '';
     el.endKm.value = '';
     el.amount.value = '';
     persist();
@@ -1824,8 +1877,11 @@ body.view-table .btn-primary{flex:none}
     updateVehicleMeta();
     updateStartHelp();
     updateCalc();
-    el.endKm.focus();
-    toast('Entry added to the receipt.');
+    if (end == null) el.startKm.focus();
+    else el.endKm.focus();
+    toast(end == null
+      ? 'Fill-up added — the next fill-up will close it.'
+      : 'Entry added to the receipt.');
   }
 
   function resetForm() {
@@ -2216,6 +2272,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function inputNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return '';
     const n = Number(value);
     if (!Number.isFinite(n)) return '';
     return String(Math.round(n * 100) / 100);
@@ -2272,20 +2329,23 @@ body.view-table .btn-primary{flex:none}
       const entries = data.entries
         .filter((e) => e && ids.has(String(e.vehicleId))
           && Number.isFinite(Number(e.start)) && Number(e.start) >= 0
-          && Number.isFinite(Number(e.end)) && Number(e.end) > Number(e.start)
           && Number.isFinite(Number(e.price)) && Number(e.price) > 0
           && Number.isFinite(Number(e.amount)) && Number(e.amount) > 0)
-        .map((e) => ({
-          id: e.id ? String(e.id) : uid(),
-          vehicleId: String(e.vehicleId),
-          date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
-          start: Number(e.start),
-          end: Number(e.end),
-          price: Number(e.price),
-          amount: Number(e.amount),
-          fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
-          createdAt: e.createdAt || new Date().toISOString()
-        }));
+        .map((e) => {
+          const start = Number(e.start);
+          const endRaw = e.end == null || e.end === '' ? NaN : Number(e.end);
+          return {
+            id: e.id ? String(e.id) : uid(),
+            vehicleId: String(e.vehicleId),
+            date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : todayISO(),
+            start,
+            end: Number.isFinite(endRaw) && endRaw > start ? endRaw : null,
+            price: Number(e.price),
+            amount: Number(e.amount),
+            fuel: e.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
+            createdAt: e.createdAt || new Date().toISOString()
+          };
+        });
 
       const wanted = data.settings && data.settings.lastVehicleId;
       const lastVehicleId = vehicles.some((v) => v.id === wanted) ? wanted : (vehicles[0] ? vehicles[0].id : '');
@@ -2409,7 +2469,7 @@ body.view-table .btn-primary{flex:none}
     const last = lastEntryFor(vehicle.id);
     addDraft = {
       date: todayISO(),
-      start: last ? inputNumber(last.end) : '',
+      start: last && last.end != null ? inputNumber(last.end) : '',
       end: '',
       fuel: last ? last.fuel : 'Petrol',
       price: last ? inputNumber(last.price) : '',
@@ -2421,12 +2481,54 @@ body.view-table .btn-primary{flex:none}
     olderDraft = { date: '', start: '', end: '', fuel: 'Petrol', price: '', amount: '' };
   }
 
-  function derive(entry) {
-    const distance = Math.max(0, entry.end - entry.start);
+  function derive(entry, nextStart) {
+    const explicit = entry.end != null && Number.isFinite(Number(entry.end)) && Number(entry.end) > entry.start
+      ? Number(entry.end)
+      : null;
+    const chained = nextStart != null && Number.isFinite(Number(nextStart)) && Number(nextStart) > entry.start
+      ? Number(nextStart)
+      : null;
+    const end = explicit != null ? explicit : chained;
+    const pending = end == null;
+    const distance = pending ? 0 : end - entry.start;
     const litres = entry.price > 0 ? entry.amount / entry.price : 0;
-    const mileage = litres > 0 ? distance / litres : 0;
-    const costPerKm = distance > 0 ? entry.amount / distance : 0;
-    return { distance, litres, mileage, costPerKm };
+    const mileage = !pending && litres > 0 ? distance / litres : 0;
+    const costPerKm = !pending && distance > 0 ? entry.amount / distance : 0;
+    return { end, pending, distance, litres, mileage, costPerKm };
+  }
+
+  function summarizeEntries(entries) {
+    const totals = {
+      distance: 0,
+      litres: 0,
+      amount: 0,
+      completedLitres: 0,
+      completedAmount: 0
+    };
+
+    entries.forEach((entry, index) => {
+      const next = entries[index + 1];
+      const d = derive(entry, next ? next.start : null);
+      totals.distance += d.distance;
+      totals.litres += d.litres;
+      totals.amount += entry.amount;
+      if (!d.pending) {
+        totals.completedLitres += d.litres;
+        totals.completedAmount += entry.amount;
+      }
+    });
+
+    totals.mileage = totals.completedLitres > 0 ? totals.distance / totals.completedLitres : NaN;
+    totals.costPerKm = totals.distance > 0 ? totals.completedAmount / totals.distance : NaN;
+    return totals;
+  }
+
+  function nextStartFor(entry) {
+    const own = state.entries
+      .filter((item) => item.vehicleId === entry.vehicleId)
+      .sort(compareEntries);
+    const index = own.findIndex((item) => item.id === entry.id);
+    return index >= 0 && own[index + 1] ? own[index + 1].start : null;
   }
 
   function calcValues(startRaw, endRaw, priceRaw, amountRaw) {
@@ -2467,10 +2569,11 @@ body.view-table .btn-primary{flex:none}
 
     const count = entries.length;
     const last = lastEntryFor(vehicle.id);
+    const lastReading = last ? (last.end == null ? last.start : last.end) : 0;
     el.vehicleChip.textContent = count === 0 ? 'empty' : `${count} ${count === 1 ? 'fill-up' : 'fill-ups'}`;
     el.vehicleHint.textContent = count === 0
       ? 'No fill-ups yet — this vehicle starts with a clean odometer.'
-      : `${count} ${count === 1 ? 'fill-up' : 'fill-ups'} · last at ${formatKm(last ? last.end : 0)} km`;
+      : `${count} ${count === 1 ? 'fill-up' : 'fill-ups'} · last reading ${formatKm(lastReading)} km`;
     el.ledgerTitle.textContent = vehicle.name;
     el.ledgerMeta.textContent = [
       vehicle.reg || '',
@@ -2491,22 +2594,13 @@ body.view-table .btn-primary{flex:none}
       return;
     }
 
-    const totals = entries.reduce((acc, entry) => {
-      const d = derive(entry);
-      acc.distance += d.distance;
-      acc.litres += d.litres;
-      acc.amount += entry.amount;
-      return acc;
-    }, { distance: 0, litres: 0, amount: 0 });
-
-    const mileage = totals.litres > 0 ? totals.distance / totals.litres : NaN;
-    const cost = totals.distance > 0 ? totals.amount / totals.distance : NaN;
+    const totals = summarizeEntries(entries);
 
     el.statEntries.textContent = String(entries.length);
     el.statDistance.textContent = formatKm(totals.distance);
     el.statFuel.textContent = amountFmt.format(totals.litres);
-    el.statMileage.textContent = Number.isFinite(mileage) ? amountFmt.format(mileage) : '—';
-    el.statCost.textContent = Number.isFinite(cost) ? amountFmt.format(cost) : '—';
+    el.statMileage.textContent = Number.isFinite(totals.mileage) ? amountFmt.format(totals.mileage) : '—';
+    el.statCost.textContent = Number.isFinite(totals.costPerKm) ? amountFmt.format(totals.costPerKm) : '—';
     el.statAmount.textContent = money(totals.amount);
   }
 
@@ -2546,7 +2640,7 @@ body.view-table .btn-primary{flex:none}
     }[key] || key;
   }
 
-  function cellEditorMarkup(entry, key) {
+  function cellEditorMarkup(entry, key, nextStart) {
     if (key === 'date') {
       return `<input class="cell-input cell-editor" type="date" data-cell-editor value="${escapeHTML(entry.date)}" max="${todayISO()}" aria-label="Fill-up date">`;
     }
@@ -2554,7 +2648,9 @@ body.view-table .btn-primary{flex:none}
       return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.start)}" aria-label="Start KM">`;
     }
     if (key === 'end') {
-      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.end)}" aria-label="End KM">`;
+      const auto = derive(entry, nextStart);
+      const hint = auto.pending ? 'Pending' : `Auto ${formatKm(auto.end)}`;
+      return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.end)}" placeholder="${escapeHTML(hint)}" aria-label="End KM, optional">`;
     }
     if (key === 'fuel') {
       return `<select class="cell-input cell-editor cell-input--fuel" data-cell-editor aria-label="Fuel type">${fuelOptions(entry.fuel)}</select>`;
@@ -2568,11 +2664,11 @@ body.view-table .btn-primary{flex:none}
     return '';
   }
 
-  function cellTdMarkup(entry, key, editing = false) {
+  function cellTdMarkup(entry, key, editing = false, nextStart = null) {
     const cls = [cellClass(key), editing ? 'cell-editing' : 'cell-editable'].filter(Boolean).join(' ');
     const field = cellLabel(key);
     if (editing) {
-      return `<td class="${cls}" data-cell="${key}" data-label="${field}">${cellEditorMarkup(entry, key)}</td>`;
+      return `<td class="${cls}" data-cell="${key}" data-label="${field}">${cellEditorMarkup(entry, key, nextStart)}</td>`;
     }
     const label = {
       date: 'date',
@@ -2582,35 +2678,47 @@ body.view-table .btn-primary{flex:none}
       price: 'price per litre',
       amount: 'amount paid'
     }[key] || key;
+    const view = key === 'end' ? derive(entry, nextStart) : null;
     const valueText = key === 'date'
       ? formatDate(entry.date)
       : key === 'start'
         ? formatKm(entry.start)
         : key === 'end'
-          ? formatKm(entry.end)
+          ? (view.pending ? 'Pending' : formatKm(view.end))
           : key === 'fuel'
             ? entry.fuel
             : key === 'price'
               ? money(entry.price)
               : money(entry.amount);
-    const content = key === 'fuel' ? fuelPillMarkup(entry) : escapeHTML(valueText);
-    return `<td class="${cls}" data-cell="${key}" data-label="${field}" tabindex="0" role="button" title="Click to edit ${label}" aria-label="${label}: ${escapeHTML(valueText)}">${content}</td>`;
+    const content = key === 'fuel'
+      ? fuelPillMarkup(entry)
+      : (key === 'end' && view.pending)
+        ? '<span class="pending-tag">Pending</span>'
+        : escapeHTML(valueText);
+    const isAutoEnd = key === 'end' && entry.end == null && !view.pending;
+    const title = isAutoEnd
+      ? `Click to edit end KM (auto from the next fill: ${formatKm(view.end)} km)`
+      : `Click to edit ${label}`;
+    const aria = isAutoEnd
+      ? `end KM: ${formatKm(view.end)}, auto from the next fill-up`
+      : `${label}: ${valueText}`;
+    return `<td class="${cls}" data-cell="${key}" data-label="${field}" tabindex="0" role="button" title="${escapeHTML(title)}" aria-label="${escapeHTML(aria)}">${content}</td>`;
   }
 
-  function displayRowMarkup(entry) {
-    const d = derive(entry);
+  function displayRowMarkup(entry, nextStart) {
+    const d = derive(entry, nextStart);
     const editingKey = editingCell && editingCell.id === entry.id ? editingCell.key : '';
     return `<tr data-entry-id="${escapeHTML(entry.id)}">
-      ${cellTdMarkup(entry, 'date', editingKey === 'date')}
-      ${cellTdMarkup(entry, 'start', editingKey === 'start')}
-      ${cellTdMarkup(entry, 'end', editingKey === 'end')}
-      <td class="num" data-out="distance" data-label="Distance">${formatKm(d.distance)}</td>
-      ${cellTdMarkup(entry, 'fuel', editingKey === 'fuel')}
-      ${cellTdMarkup(entry, 'price', editingKey === 'price')}
+      ${cellTdMarkup(entry, 'date', editingKey === 'date', nextStart)}
+      ${cellTdMarkup(entry, 'start', editingKey === 'start', nextStart)}
+      ${cellTdMarkup(entry, 'end', editingKey === 'end', nextStart)}
+      <td class="num" data-out="distance" data-label="Distance">${d.pending ? '—' : formatKm(d.distance)}</td>
+      ${cellTdMarkup(entry, 'fuel', editingKey === 'fuel', nextStart)}
+      ${cellTdMarkup(entry, 'price', editingKey === 'price', nextStart)}
       <td class="num" data-out="litres" data-label="Litres">${amountFmt.format(d.litres)}</td>
-      <td class="num mileage" data-out="mileage" data-label="Mileage">${amountFmt.format(d.mileage)}</td>
-      <td class="num" data-out="cost" data-label="Cost / km">${amountFmt.format(d.costPerKm)}</td>
-      ${cellTdMarkup(entry, 'amount', editingKey === 'amount')}
+      <td class="num mileage" data-out="mileage" data-label="Mileage">${d.pending ? '—' : amountFmt.format(d.mileage)}</td>
+      <td class="num" data-out="cost" data-label="Cost / km">${d.pending ? '—' : amountFmt.format(d.costPerKm)}</td>
+      ${cellTdMarkup(entry, 'amount', editingKey === 'amount', nextStart)}
       <td class="act" data-label="Actions">${rowActions()}</td>
     </tr>`;
   }
@@ -2645,7 +2753,7 @@ body.view-table .btn-primary{flex:none}
     }
     const config = {
       start: { step: '0.1', placeholder: kind === 'add' ? '0' : 'Start', label: 'start KM' },
-      end: { step: '0.1', placeholder: kind === 'add' ? '0' : 'End', label: 'end KM' },
+      end: { step: '0.1', placeholder: 'Auto', label: 'end KM, optional' },
       price: { step: '0.01', placeholder: '0.00', label: 'price per litre' },
       amount: { step: '0.01', placeholder: '0.00', label: 'amount paid' }
     }[key];
@@ -2778,15 +2886,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function totalsMarkup(entries) {
-    const totals = entries.reduce((acc, entry) => {
-      const d = derive(entry);
-      acc.distance += d.distance;
-      acc.litres += d.litres;
-      acc.amount += entry.amount;
-      return acc;
-    }, { distance: 0, litres: 0, amount: 0 });
-    const mileage = totals.litres > 0 ? totals.distance / totals.litres : NaN;
-    const cost = totals.distance > 0 ? totals.amount / totals.distance : NaN;
+    const totals = summarizeEntries(entries);
 
     return `<tr>
       <td colspan="3" class="t-label">Totals</td>
@@ -2794,8 +2894,8 @@ body.view-table .btn-primary{flex:none}
       <td></td>
       <td></td>
       <td class="num" data-label="Litres">${amountFmt.format(totals.litres)}</td>
-      <td class="num" data-label="Mileage">${Number.isFinite(mileage) ? amountFmt.format(mileage) : '—'}</td>
-      <td class="num" data-label="Cost / km">${Number.isFinite(cost) ? amountFmt.format(cost) : '—'}</td>
+      <td class="num" data-label="Mileage">${Number.isFinite(totals.mileage) ? amountFmt.format(totals.mileage) : '—'}</td>
+      <td class="num" data-label="Cost / km">${Number.isFinite(totals.costPerKm) ? amountFmt.format(totals.costPerKm) : '—'}</td>
       <td class="amount" data-label="Total paid">${money(totals.amount)}</td>
       <td></td>
     </tr>`;
@@ -2813,7 +2913,9 @@ body.view-table .btn-primary{flex:none}
       rows += olderCaptionMarkup();
       rows += olderRowMarkup();
     }
-    rows += entries.map(displayRowMarkup).join('');
+    rows += entries
+      .map((entry, index) => displayRowMarkup(entry, entries[index + 1] ? entries[index + 1].start : null))
+      .join('');
     rows += addRowMarkup();
     el.entriesBody.innerHTML = rows;
     el.tableFoot.innerHTML = entries.length ? totalsMarkup(entries) : '';
@@ -2896,10 +2998,10 @@ body.view-table .btn-primary{flex:none}
     if (!Number.isFinite(draft.start) || draft.start < 0) {
       return { key: 'start', message: 'Enter a valid starting KM.' };
     }
-    if (!Number.isFinite(draft.end) || draft.end < 0) {
-      return { key: 'end', message: 'Enter a valid ending KM.' };
+    if (Number.isFinite(draft.end) && draft.end < 0) {
+      return { key: 'end', message: 'Enter a valid ending KM, or leave it blank.' };
     }
-    if (draft.end <= draft.start) {
+    if (Number.isFinite(draft.end) && draft.end <= draft.start) {
       return { key: 'end', message: 'End KM must be higher than Start KM.' };
     }
     if (!Number.isFinite(draft.price) || draft.price <= 0) {
@@ -2917,11 +3019,13 @@ body.view-table .btn-primary{flex:none}
     }
     if (key === 'start') {
       if (!Number.isFinite(value) || value < 0) return 'Enter a valid starting KM.';
-      if (value >= entry.end) return 'Start KM must be lower than End KM.';
+      if (entry.end != null && value >= entry.end) return 'Start KM must be lower than End KM.';
     }
     if (key === 'end') {
-      if (!Number.isFinite(value) || value < 0) return 'Enter a valid ending KM.';
-      if (value <= entry.start) return 'End KM must be higher than Start KM.';
+      if (value != null && (!Number.isFinite(value) || value < 0)) {
+        return 'Enter a valid ending KM, or leave it blank.';
+      }
+      if (value != null && value <= entry.start) return 'End KM must be higher than Start KM.';
     }
     if (key === 'price' && (!Number.isFinite(value) || value <= 0)) {
       return 'Enter a valid price per litre.';
@@ -2955,6 +3059,10 @@ body.view-table .btn-primary{flex:none}
   function cellValueFromEditor(key, raw) {
     if (key === 'date') return String(raw || '');
     if (key === 'fuel') return raw === 'Diesel' ? 'Diesel' : 'Petrol';
+    if (key === 'end') {
+      const text = String(raw == null ? '' : raw).trim();
+      return text === '' ? null : parseInput(text);
+    }
     return parseInput(raw);
   }
 
@@ -2968,12 +3076,12 @@ body.view-table .btn-primary{flex:none}
     revealEditorOnMobile(editor);
   }
 
-  function updateComputedCells(row, entry) {
-    const d = derive(entry);
-    setOut(row, 'distance', formatKm(d.distance));
+  function updateComputedCells(row, entry, nextStart) {
+    const d = derive(entry, nextStart);
+    setOut(row, 'distance', d.pending ? '—' : formatKm(d.distance));
     setOut(row, 'litres', amountFmt.format(d.litres));
-    setOut(row, 'mileage', amountFmt.format(d.mileage));
-    setOut(row, 'cost', amountFmt.format(d.costPerKm));
+    setOut(row, 'mileage', d.pending ? '—' : amountFmt.format(d.mileage));
+    setOut(row, 'cost', d.pending ? '—' : amountFmt.format(d.costPerKm));
   }
 
   function refreshSummary() {
@@ -2995,8 +3103,9 @@ body.view-table .btn-primary{flex:none}
       renderAll();
       return;
     }
-    td.outerHTML = cellTdMarkup(entry, key, false);
-    updateComputedCells(row, entry);
+    const nextStart = nextStartFor(entry);
+    td.outerHTML = cellTdMarkup(entry, key, false, nextStart);
+    updateComputedCells(row, entry, nextStart);
     refreshSummary();
     if (refocus) {
       const next = row.querySelector(`td[data-cell="${key}"]`);
@@ -3030,15 +3139,28 @@ body.view-table .btn-primary{flex:none}
       return false;
     }
 
-    const changed = typeof value === 'number'
-      ? Number(entry[key]) !== value
-      : String(entry[key]) !== String(value);
+    const previous = entry[key];
+    const changed = value === null
+      ? previous != null
+      : (typeof value === 'number' ? Number(previous) !== value : String(previous) !== String(value));
 
     if (changed) {
       entry[key] = value;
-      if (key === 'date' || key === 'start') sortVehicleEntries(entry.vehicleId);
       const vehicle = getVehicle(entry.vehicleId);
       if (vehicle) vehicle.issuedAt = new Date().toISOString();
+
+      if (key === 'date' || key === 'start') {
+        sortVehicleEntries(entry.vehicleId);
+        persist();
+        editingCell = null;
+        renderAll();
+        const row = $$('tr[data-entry-id]', el.entriesBody).find((tr) => tr.dataset.entryId === entry.id);
+        const cell = row && row.querySelector(`td[data-cell="${key}"]`);
+        if (cell) cell.focus({ preventScroll: true });
+        if (notify) toast('Cell updated.');
+        return true;
+      }
+
       persist();
     }
 
@@ -3226,7 +3348,7 @@ body.view-table .btn-primary{flex:none}
       vehicleId: vehicle.id,
       date: draft.date,
       start: draft.start,
-      end: draft.end,
+      end: Number.isFinite(draft.end) ? draft.end : null,
       price: draft.price,
       amount: draft.amount,
       fuel: draft.fuel,
@@ -3242,10 +3364,13 @@ body.view-table .btn-primary{flex:none}
     persistDraft();
     persist();
     renderAll();
-    toast(`Fill-up added for ${vehicle.name}.`);
+    toast(entry.end == null
+      ? `Fill-up added for ${vehicle.name} — the next fill-up will close it.`
+      : `Fill-up added for ${vehicle.name}.`);
     requestAnimationFrame(() => {
       const row = $('#addRow', el.entriesBody);
-      if (row) focusRowField(row, 'end');
+      if (!row) return;
+      focusRowField(row, entry.end == null ? 'start' : 'end');
     });
   }
 
@@ -3273,7 +3398,7 @@ body.view-table .btn-primary{flex:none}
       vehicleId: vehicle.id,
       date: draft.date,
       start: draft.start,
-      end: draft.end,
+      end: Number.isFinite(draft.end) ? draft.end : null,
       price: draft.price,
       amount: draft.amount,
       fuel: draft.fuel,
@@ -3287,7 +3412,7 @@ body.view-table .btn-primary{flex:none}
     if (addDraft.start === '') {
       const latest = lastEntryFor(vehicle.id);
       if (latest) {
-        addDraft.start = inputNumber(latest.end);
+        addDraft.start = inputNumber(latest.end == null ? latest.start : latest.end);
         persistDraft();
       }
     }
@@ -3295,7 +3420,9 @@ body.view-table .btn-primary{flex:none}
     resetOlderDraft();
     persist();
     renderAll();
-    toast(`Older fill-up added for ${vehicle.name}.`);
+    toast(entry.end == null
+      ? `Older fill-up added for ${vehicle.name} — the next reading closes it.`
+      : `Older fill-up added for ${vehicle.name}.`);
   }
 
   function deleteEntry(id) {

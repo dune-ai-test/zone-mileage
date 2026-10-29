@@ -14,8 +14,8 @@ Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no bu
 - Table view by default, with hash routing (`#table`, `#receipt`) and a receipt redirect fallback.
 - One-cell-at-a-time editing: click/tap to edit, `Enter` or blur saves, `Escape` cancels.
 - Always-open blank add row plus a separate **Older entry** row for backdated fill-ups.
-- Drafts stay open between saves, including start KM and end KM entered at different times.
-- Calculated distance, mileage (km/L), and cost per km; missing values show a muted `—`.
+- Start-only fill-ups: enter today's odometer at the pump and leave End km blank. The next fill-up's Start km closes the previous entry automatically.
+- Calculated distance, mileage (km/L), and cost per km; still-open entries show **Pending** and a muted `—` until the next fill-up closes them.
 - JSON export/import with confirmation and Undo. Import replaces the ledger and syncs the replacement to D1.
 - Mobile card layouts, 16px inputs, larger touch targets, and editors scrolled into view.
 - Optional D1 sync with a live status pill in the masthead (`Checking`, `Saving`, `D1 synced`, `D1 offline`, `Local only`).
@@ -39,12 +39,21 @@ The ledger is one JSON object in `localStorage`:
 {
   "version": 1,
   "vehicles": [{ "id": "v…", "name": "…", "reg": "…", "receiptNo": "…", "issuedAt": "…" }],
-  "entries": [{ "id": "e…", "vehicleId": "v…", "date": "2026-10-29", "start": 0, "end": 0, "price": 0, "amount": 0, "fuel": "Petrol", "createdAt": 0 }],
+  "entries": [{ "id": "e…", "vehicleId": "v…", "date": "2026-10-29", "start": 0, "end": null, "price": 0, "amount": 0, "fuel": "Petrol", "createdAt": 0 }],
   "settings": { "lastVehicleId": "v…" }
 }
 ```
 
-In D1 this object is stored as a single row in `ledger` (`id = 'default'`), along with a monotonically increasing `version` used for pull decisions.
+`end` is nullable. `null` means the fill-up is waiting for the next entry's `start` reading (its **Pending** state). A number is an explicit closing reading that overrides chaining. In exported JSON, pending entries keep `"end": null`. In D1 this object is stored as a single row in `ledger` (`id = 'default'`), along with a monotonically increasing `version` used for pull decisions.
+
+## How a fill-up closes
+
+1. At the pump, enter the odometer you see now as **Start km**. Leave **End km** blank and save.
+2. That entry stays **Pending**. Its distance, Km/L, and cost/km show `—`; its fuel and amount still count in the totals.
+3. At the next refill, the new entry's **Start km** becomes the previous entry's end. The previous row fills in its distance and mileage automatically.
+4. To override the chain, type an explicit **End km** on the receipt form or in the table's End cell. Clearing that End cell returns the row to automatic chaining.
+
+Entries are ordered per vehicle by date, then start KM, then creation time. The newest entry therefore stays Pending until there is a later reading, and backfilling an **Older entry** closes the right gap in the chain.
 
 ## Run locally
 
