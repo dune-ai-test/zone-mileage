@@ -87,7 +87,7 @@ The site is live at `https://<project-name>.pages.dev`. The masthead pill will s
 
 ### 3. Create the D1 database
 
-1. In the dashboard go to **Workers & Pages** → **D1 SQL Database**.
+1. In the dashboard go to **Storage & Databases** → **D1 SQL Database** (older dashboards list D1 under **Workers & Pages**).
 2. Click **Create database**.
 3. Name it **`zone-mileage`** and create it.
 
@@ -114,7 +114,7 @@ Open:
 https://<project-name>.pages.dev/api/ledger
 ```
 
-- A healthy, still-empty database returns HTTP **404** with JSON like `{"app":"zone-mileage","empty":true}`. That is the expected “no ledger yet” response.
+- A healthy, still-empty database returns HTTP **404** with JSON like `{"app":"zone-mileage","empty":true}`. That is the expected “no ledger yet” response. (Once the site has opened and uploaded its first ledger, the same URL returns **200** with the stored data instead.)
 - A `503` explaining that the `DB` binding is missing means the binding was not saved or the project has not been redeployed since adding it.
 - If you get an HTML 404 page instead, `/api/ledger` is not deployed — check that the `functions/` folder is in the repository root.
 

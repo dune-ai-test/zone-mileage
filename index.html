@@ -695,6 +695,7 @@ a{color:inherit}
 .cloud-pill[data-state="offline"],.cloud-pill[data-state="local"]{color:#a2472c;border-color:rgba(162,71,44,.26);background:rgba(179,69,36,.08)}
 .cloud-pill[data-state="offline"] .cloud-dot,.cloud-pill[data-state="local"] .cloud-dot{background:#b34524}
 @keyframes cloudPulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.cloud-dot{animation:none!important}}
 .site-nav{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid rgba(28,26,21,.14);border-radius:999px;background:rgba(255,255,255,.28);backdrop-filter:blur(5px)}
 .site-nav a{padding:7px 13px;border-radius:999px;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;text-decoration:none;color:var(--muted);transition:background .15s,color .15s;white-space:nowrap}
 .site-nav a:hover{color:var(--ink);background:rgba(255,255,255,.5)}
