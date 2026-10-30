@@ -96,6 +96,10 @@ h1 em{font-style:italic;color:var(--accent-ink);font-weight:400}
 .input-box input{border:0;background:transparent;height:42px;width:100%;min-width:0;padding:0 11px;outline:none;font-family:var(--sans);font-size:14px;font-weight:500;letter-spacing:.01em;color:var(--ink)}
 .input-box input::placeholder{color:#aca494;font-weight:400}
 .input-box input[type=date]{font-size:13px;padding:0 10px;min-height:42px;color:var(--ink-soft);color-scheme:light}
+.date-pick{flex:0 0 38px;align-self:stretch;display:grid;place-items:center;border:0;border-left:1px solid var(--line);background:transparent;color:var(--muted);padding:0;cursor:pointer;transition:color .15s,background .15s}
+.date-pick:hover{color:var(--ink);background:rgba(28,26,21,.04)}
+.date-pick svg{width:14px;height:14px;pointer-events:none}
+.date-native{position:absolute;right:0;bottom:0;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .affix{flex:none;font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -517,6 +521,12 @@ h1 em{font-style:italic;color:var(--accent-ink);font-weight:400}
 .cell-input::placeholder{color:#b6ae9f;font-weight:500}
 .cell-input.num-input{text-align:right;font-variant-numeric:tabular-nums}
 .cell-input[type=date]{font-size:12px;padding:0 6px}
+.date-edit{position:relative;display:flex;align-items:stretch;width:100%;min-width:0;border:1px solid var(--line-strong);border-radius:6px;background:#fffefb;overflow:hidden}
+.date-edit:focus-within{border-color:var(--ink);box-shadow:0 0 0 2px rgba(28,26,21,.08)}
+.date-edit .cell-input{flex:1 1 auto;width:auto;border:0;border-radius:0;background:transparent;padding:0 6px;font-size:12px;box-shadow:none}
+.date-edit .cell-input:focus{box-shadow:none;border:0}
+.date-pick--cell{flex:0 0 30px;height:auto;border:0;border-left:1px solid var(--line);border-radius:0;background:transparent}
+.date-pick--cell svg{width:13px;height:13px}
 .cell-input--fuel{font-family:var(--sans);font-size:13px;font-weight:600;padding:0 6px;cursor:pointer}
 .cell-out{display:block;padding-right:3px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
 .add-actions{display:inline-flex;align-items:center;gap:4px}
@@ -591,6 +601,8 @@ h1 em{font-style:italic;color:var(--accent-ink);font-weight:400}
   .ledger-table tbody td.cell-editing{background:#fffdf7!important;box-shadow:none;outline:1px solid var(--ink);outline-offset:-1px;border-radius:8px;padding:6px}
   .ledger-table tbody tr:hover td.cell-editing{background:#fffdf7!important;box-shadow:none}
   .cell-input,.cell-input.cell-editor{height:42px;font-size:16px}
+  .date-edit .cell-input{height:42px;font-size:16px}
+  .date-pick--cell{flex-basis:38px}
   .cell-input[type=date],.cell-input--fuel{font-size:16px;padding:0 6px}
   .cell-out{display:block;font-size:15px;text-align:left;padding:0}
   .fuel-pill{font-size:14px}
@@ -863,9 +875,13 @@ body.view-table .btn-primary{flex:none}
             </div>
           </div>
           <div class="field date-field">
-            <label class="field-label" for="entryDate">Date <span class="field-tag">of fill-up</span></label>
-            <div class="input-box">
-              <input id="entryDate" type="date">
+            <label class="field-label" for="entryDate">Date <span class="field-tag">type dd/mm/yy</span></label>
+            <div class="input-box" data-date-wrap>
+              <input id="entryDate" type="text" autocomplete="off" maxlength="10" placeholder="dd/mm/yy" data-date-input aria-label="Date of fill-up, type dd/mm/yy">
+              <button class="date-pick" type="button" data-date-pick aria-label="Open calendar to choose the date">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+              </button>
+              <input class="date-native" type="date" data-date-native tabindex="-1" aria-hidden="true">
             </div>
           </div>
         </div>
@@ -1094,7 +1110,10 @@ body.view-table .btn-primary{flex:none}
     <span>Saved in this browser · syncs to D1 when connected</span>
     <span class="foot-dot" aria-hidden="true">·</span>
     <span>Receipt &amp; table share one ledger</span>
+    <span class="foot-dot" aria-hidden="true">·</span>
+    <span id="appVersion">v0.0.5</span>
   </footer>
+  <!-- Version rule: bump #appVersion on every commit/push (current: 0.0.5). -->
 </div>
 
 <input id="importJsonInput" type="file" accept="application/json,.json" hidden>
@@ -1109,6 +1128,56 @@ body.view-table .btn-primary{flex:none}
 (() => {
   'use strict';
 
+  const pad = (value) => String(value).padStart(2, '0');
+
+  function todayISO(d = new Date()) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function parseInput(raw) {
+    const text = String(raw == null ? '' : raw).trim();
+    if (!text) return '';
+
+    let year;
+    let month;
+    let day;
+    const iso = text.match(/^(\d{4})[\/\-.\s](\d{1,2})[\/\-.\s](\d{1,2})$/);
+    if (iso) {
+      year = Number(iso[1]);
+      month = Number(iso[2]);
+      day = Number(iso[3]);
+    } else {
+      const typed = text.match(/^(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{2}|\d{4})$/);
+      if (!typed) return '';
+      day = Number(typed[1]);
+      month = Number(typed[2]);
+      year = Number(typed[3]);
+      if (year < 100) year += 2000;
+    }
+
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return '';
+    return `${year}-${pad(month)}-${pad(day)}`;
+  }
+
+  function formatInput(value) {
+    const match = String(value == null ? '' : value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}/${match[2]}/${match[1].slice(-2)}` : '';
+  }
+
+  window.zoneDate = {
+    todayISO,
+    parseInput,
+    formatInput,
+    isFuture: (value) => Boolean(value) && value > todayISO()
+  };
+})();
+</script>
+
+<script>
+(() => {
+  'use strict';
+
   const STORAGE_KEY = 'mileage-receipt.v1';
   const todayISO = (d = new Date()) => {
     const y = d.getFullYear();
@@ -1116,6 +1185,9 @@ body.view-table .btn-primary{flex:none}
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
+  const parseDateInput = (value) => window.zoneDate.parseInput(value);
+  const formatDateInput = (value) => window.zoneDate.formatInput(value);
+  const datePickBusy = () => Date.now() < Number(window.__zoneDatePickUntil || 0);
 
   const amountFmt = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const kmFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
@@ -1825,9 +1897,18 @@ body.view-table .btn-primary{flex:none}
     const end = endRaw === '' ? null : readNumber(el.endKm);
     const price = readNumber(el.price);
     const amount = readNumber(el.amount);
+    const date = parseDateInput(el.entryDate.value);
 
     if (!Number.isFinite(start) || start < 0) {
       showFormError('Enter the starting odometer reading.', el.startKm);
+      return;
+    }
+    if (!date) {
+      showFormError('Enter the date as dd/mm/yy.', el.entryDate);
+      return;
+    }
+    if (date > todayISO()) {
+      showFormError('The date cannot be in the future.', el.entryDate);
       return;
     }
     if (end != null && (!Number.isFinite(end) || end < 0)) {
@@ -1846,15 +1927,11 @@ body.view-table .btn-primary{flex:none}
       showFormError('Enter the total amount paid.', el.amount);
       return;
     }
-    if (!el.entryDate.value) {
-      showFormError('Choose the date of this fill-up.', el.entryDate);
-      return;
-    }
 
     const entry = {
       id: uid(),
       vehicleId,
-      date: el.entryDate.value,
+      date,
       start,
       end,
       price,
@@ -1899,8 +1976,7 @@ body.view-table .btn-primary{flex:none}
       updateStartHelp();
       updateVehicleMeta();
     }
-    el.entryDate.value = todayISO();
-    el.entryDate.max = todayISO();
+    el.entryDate.value = formatDateInput(todayISO());
   }
 
   function voidEntry(entryId) {
@@ -2149,8 +2225,7 @@ body.view-table .btn-primary{flex:none}
   function init() {
     state = loadState() || createState();
     lastVehicleChoice = state.settings.lastVehicleId || state.vehicles[0]?.id || '';
-    el.entryDate.value = todayISO();
-    el.entryDate.max = todayISO();
+    el.entryDate.value = formatDateInput(todayISO());
     el.todayStamp.textContent = stampFmt.format(new Date());
 
     renderVehicleOptions();
@@ -2193,6 +2268,9 @@ body.view-table .btn-primary{flex:none}
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
+  const parseDateInput = (value) => window.zoneDate.parseInput(value);
+  const formatDateInput = (value) => window.zoneDate.formatInput(value);
+  const datePickBusy = () => Date.now() < Number(window.__zoneDatePickUntil || 0);
 
   const amountFmt = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const kmFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 });
@@ -2456,7 +2534,7 @@ body.view-table .btn-primary{flex:none}
     const saved = useSaved ? drafts[vehicle.id] : null;
     if (saved && typeof saved === 'object') {
       addDraft = {
-        date: /^\d{4}-\d{2}-\d{2}$/.test(String(saved.date || '')) ? saved.date : todayISO(),
+        date: parseDateInput(saved.date) || todayISO(),
         start: saved.start == null ? '' : String(saved.start),
         end: saved.end == null ? '' : String(saved.end),
         fuel: saved.fuel === 'Diesel' ? 'Diesel' : 'Petrol',
@@ -2642,7 +2720,13 @@ body.view-table .btn-primary{flex:none}
 
   function cellEditorMarkup(entry, key, nextStart) {
     if (key === 'date') {
-      return `<input class="cell-input cell-editor" type="date" data-cell-editor value="${escapeHTML(entry.date)}" max="${todayISO()}" aria-label="Fill-up date">`;
+      return `<span class="date-edit" data-date-wrap>
+        <input class="cell-input cell-editor" type="text" autocomplete="off" maxlength="10" placeholder="dd/mm/yy" data-date-input data-cell-editor value="${escapeHTML(formatDateInput(entry.date))}" aria-label="Fill-up date, type dd/mm/yy">
+        <button class="date-pick date-pick--cell" type="button" data-date-pick aria-label="Open calendar to choose the date">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+        </button>
+        <input class="date-native" type="date" data-date-native tabindex="-1" aria-hidden="true" value="${escapeHTML(entry.date)}" max="${todayISO()}">
+      </span>`;
     }
     if (key === 'start') {
       return `<input class="cell-input cell-editor num-input" type="number" inputmode="decimal" step="0.1" min="0" data-cell-editor value="${inputNumber(entry.start)}" aria-label="Start KM">`;
@@ -2724,7 +2808,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function draftHasValue(key, value) {
-    if (key === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+    if (key === 'date') return Boolean(parseDateInput(value));
     if (key === 'start' || key === 'end' || key === 'price' || key === 'amount') {
       const raw = String(value == null ? '' : value).trim();
       return raw !== '' && Number.isFinite(parseInput(raw));
@@ -2733,7 +2817,10 @@ body.view-table .btn-primary{flex:none}
   }
 
   function draftDisplayText(key, value) {
-    if (key === 'date') return formatDate(value);
+    if (key === 'date') {
+      const iso = parseDateInput(value);
+      return iso ? formatDate(iso) : '—';
+    }
     if (key === 'fuel') return value === 'Diesel' ? 'Diesel' : 'Petrol';
     const raw = String(value == null ? '' : value).trim();
     if (raw === '') return '—';
@@ -2746,7 +2833,14 @@ body.view-table .btn-primary{flex:none}
     const attr = kind === 'add' ? 'add' : 'older';
     const label = kind === 'add' ? 'New' : 'Older';
     if (key === 'date') {
-      return `<input class="cell-input" type="date" data-${attr}="date" value="${escapeHTML(value)}" max="${todayISO()}" aria-label="${label} fill-up date">`;
+      const iso = parseDateInput(value);
+      return `<span class="date-edit" data-date-wrap>
+        <input class="cell-input" type="text" autocomplete="off" maxlength="10" placeholder="dd/mm/yy" data-date-input data-${attr}="date" value="${escapeHTML(formatDateInput(iso))}" aria-label="${label} fill-up date, type dd/mm/yy">
+        <button class="date-pick date-pick--cell" type="button" data-date-pick aria-label="Open calendar to choose the date">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+        </button>
+        <input class="date-native" type="date" data-date-native tabindex="-1" aria-hidden="true" value="${escapeHTML(iso)}" max="${todayISO()}">
+      </span>`;
     }
     if (key === 'fuel') {
       return `<select class="cell-input cell-input--fuel" data-${attr}="fuel" aria-label="${label} fill-up fuel type">${fuelOptions(value)}</select>`;
@@ -2817,10 +2911,16 @@ body.view-table .btn-primary{flex:none}
     const input = td.querySelector('[data-add], [data-older]');
     if (!draft || !input) return;
     const value = input.value;
-    draft[key] = value;
+    if (key === 'date') {
+      const iso = parseDateInput(value);
+      if (String(value).trim() !== '' && !iso) toast('Enter the date as dd/mm/yy.');
+      draft[key] = iso;
+    } else {
+      draft[key] = value;
+    }
     if (kind === 'add') persistDraft();
     const row = td.closest('tr');
-    td.outerHTML = draftDisplayCellMarkup(kind, key, value);
+    td.outerHTML = draftDisplayCellMarkup(kind, key, draft[key]);
     if (auto && kind === 'add' && autoAddIfComplete()) return;
     if (refocus && row) {
       const display = row.querySelector(`[data-draft-display="${key}"]`);
@@ -2992,8 +3092,12 @@ body.view-table .btn-primary{flex:none}
   }
 
   function validateDraft(draft) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(draft.date || ''))) {
-      return { key: 'date', message: 'Choose the date of this fill-up.' };
+    const date = parseDateInput(draft.date);
+    if (!date) {
+      return { key: 'date', message: 'Enter the date as dd/mm/yy.' };
+    }
+    if (date > todayISO()) {
+      return { key: 'date', message: 'The date cannot be in the future.' };
     }
     if (!Number.isFinite(draft.start) || draft.start < 0) {
       return { key: 'start', message: 'Enter a valid starting KM.' };
@@ -3014,8 +3118,9 @@ body.view-table .btn-primary{flex:none}
   }
 
   function validateCellValue(entry, key, value) {
-    if (key === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) {
-      return 'Choose the date of this fill-up.';
+    if (key === 'date') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return 'Enter the date as dd/mm/yy.';
+      if (value > todayISO()) return 'The date cannot be in the future.';
     }
     if (key === 'start') {
       if (!Number.isFinite(value) || value < 0) return 'Enter a valid starting KM.';
@@ -3057,7 +3162,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function cellValueFromEditor(key, raw) {
-    if (key === 'date') return String(raw || '');
+    if (key === 'date') return parseDateInput(raw);
     if (key === 'fuel') return raw === 'Diesel' ? 'Diesel' : 'Petrol';
     if (key === 'end') {
       const text = String(raw == null ? '' : raw).trim();
@@ -3225,13 +3330,16 @@ body.view-table .btn-primary{flex:none}
 
   function handleCellBlur(event) {
     const editor = event.target.closest('[data-cell-editor]');
-    if (!editor || !editor.isConnected) return;
+    if (!editor || !editor.isConnected || datePickBusy()) return;
+    const wrap = editor.closest('[data-date-wrap]');
+    if (wrap && event.relatedTarget && wrap.contains(event.relatedTarget)) return;
     commitCellEditor();
   }
 
   function handleDraftBlur(event) {
     const td = event.target.closest('[data-draft-editor]');
     if (!td) return;
+    if (datePickBusy()) return;
     if (event.relatedTarget && td.contains(event.relatedTarget)) return;
     const target = event.relatedTarget;
     const otherButton = target && typeof target.closest === 'function'
@@ -3346,7 +3454,7 @@ body.view-table .btn-primary{flex:none}
     const entry = {
       id: uid(),
       vehicleId: vehicle.id,
-      date: draft.date,
+      date: parseDateInput(draft.date),
       start: draft.start,
       end: Number.isFinite(draft.end) ? draft.end : null,
       price: draft.price,
@@ -3396,7 +3504,7 @@ body.view-table .btn-primary{flex:none}
     const entry = {
       id: uid(),
       vehicleId: vehicle.id,
-      date: draft.date,
+      date: parseDateInput(draft.date),
       start: draft.start,
       end: Number.isFinite(draft.end) ? draft.end : null,
       price: draft.price,
@@ -3468,7 +3576,7 @@ body.view-table .btn-primary{flex:none}
 
   function handleTableInput(event) {
     const editor = event.target.closest('[data-cell-editor]');
-    if (editor && event.type === 'change' && (editor.tagName === 'SELECT' || editor.type === 'date')) {
+    if (editor && event.type === 'change' && (editor.tagName === 'SELECT' || editor.hasAttribute('data-date-input'))) {
       commitCellEditor({ notify: true, refocus: true });
       return;
     }
@@ -3502,6 +3610,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function handleTableClick(event) {
+    if (event.target.closest('[data-date-pick]') || event.target.closest('[data-date-native]')) return;
     if (event.target.closest('[data-add-submit]')) {
       if (Date.now() - lastAutoAddAt < 300) return;
       addEntry();
@@ -4029,6 +4138,73 @@ body.view-table .btn-primary{flex:none}
   } else {
     boot();
   }
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const date = window.zoneDate;
+  if (!date) return;
+
+  function guardPick(event) {
+    if (!event.target.closest('[data-date-pick]')) return;
+    window.__zoneDatePickUntil = Date.now() + 1200;
+    event.preventDefault();
+  }
+
+  document.addEventListener('pointerdown', guardPick, true);
+  document.addEventListener('mousedown', guardPick, true);
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-date-pick]');
+    if (!button) return;
+    const wrap = button.closest('[data-date-wrap]');
+    const text = wrap && wrap.querySelector('[data-date-input]');
+    const native = wrap && wrap.querySelector('[data-date-native]');
+    if (!text || !native) return;
+    event.stopPropagation();
+    native.value = date.parseInput(text.value) || '';
+    native.max = date.todayISO();
+    try {
+      if (typeof native.showPicker === 'function') {
+        native.showPicker();
+      } else {
+        native.focus({ preventScroll: true });
+        native.click();
+      }
+    } catch {
+      native.focus({ preventScroll: true });
+    }
+  }, true);
+
+  document.addEventListener('change', (event) => {
+    const native = event.target.closest('[data-date-native]');
+    if (!native) return;
+    const wrap = native.closest('[data-date-wrap]');
+    const text = wrap && wrap.querySelector('[data-date-input]');
+    if (!text) return;
+    if (native.value) {
+      text.value = date.formatInput(native.value);
+      text.dispatchEvent(new Event('input', { bubbles: true }));
+      text.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (text.isConnected) text.focus({ preventScroll: true });
+  }, true);
+
+  document.addEventListener('focusout', (event) => {
+    const native = event.target.closest('[data-date-native]');
+    if (!native) return;
+    const wrap = native.closest('[data-date-wrap]');
+    const text = wrap && wrap.querySelector('[data-date-input]');
+    window.setTimeout(() => {
+      if (!text || !text.isConnected) return;
+      const active = document.activeElement;
+      if (active === document.body || active === document.documentElement) {
+        text.focus({ preventScroll: true });
+      }
+    }, 0);
+  }, true);
 })();
 </script>
 <!-- Optional D1 sync. Without /api/ledger the site stays local-only. -->

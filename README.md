@@ -9,9 +9,12 @@ Both views share the same ledger. Each vehicle keeps its own odometer continuity
 
 Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no build step.
 
+**Version:** `0.0.5` (shown in the page footer). Bump the footer `#appVersion` on every commit/push.
+
 ## Features
 
 - Table view by default, with hash routing (`#table`, `#receipt`) and a receipt redirect fallback.
+- Dates can be typed as `dd/mm/yy` (or `dd/mm/yyyy`), with the calendar picker still available from the calendar button.
 - One-cell-at-a-time editing: click/tap to edit, `Enter` or blur saves, `Escape` cancels.
 - Always-open blank add row plus a separate **Older entry** row for backdated fill-ups.
 - Start-only fill-ups: enter today's odometer at the pump and leave End km blank. The next fill-up's Start km closes the previous entry automatically.
