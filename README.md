@@ -9,7 +9,7 @@ Both views share the same ledger. Each vehicle keeps its own odometer continuity
 
 Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no build step.
 
-**Version:** `0.0.5` (shown in the page footer). Bump the footer `#appVersion` on every commit/push.
+**Version:** `0.0.6` (shown in the page footer). Bump the footer `#appVersion` on every commit/push.
 
 ## Features
 
@@ -19,6 +19,7 @@ Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no bu
 - Always-open blank add row plus a separate **Older entry** row for backdated fill-ups.
 - Start-only fill-ups: enter today's odometer at the pump and leave End km blank. The next fill-up's Start km closes the previous entry automatically.
 - Calculated distance, mileage (km/L), and cost per km; still-open entries show **Pending** and a muted `—` until the next fill-up closes them.
+- Mileage uses the **previous fill-up's litres and amount** for each row, matching the fuel that was actually burned over that distance. The first row shows its distance but no mileage or cost/km because there is no previous fill to attribute.
 - JSON export/import with confirmation and Undo. Import replaces the ledger and syncs the replacement to D1.
 - Mobile card layouts, 16px inputs, larger touch targets, and editors scrolled into view.
 - Optional D1 sync with a live status pill in the masthead (`Checking`, `Saving`, `D1 synced`, `D1 offline`, `Local only`).

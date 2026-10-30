@@ -140,6 +140,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .date-field{margin-top:11px;max-width:200px}
 .calc{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 0 13px;padding:12px 14px 13px;border-radius:12px;background:radial-gradient(120% 150% at 0% 0%,rgba(255,255,255,.07),transparent 60%),#211f19;color:#f4efe4;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 16px -12px rgba(20,18,13,.8)}
 .calc::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(115deg,transparent 0 10px,rgba(255,255,255,.022) 10px 11px)}
+.calc-note{margin:-5px 0 13px;font-family:var(--mono);font-size:8.5px;line-height:1.5;color:var(--faint)}
 .calc-item{position:relative;min-width:0;padding:0 12px}
 .calc-item:first-child{padding-left:1px}
 .calc-item+.calc-item{border-left:1px solid rgba(255,255,255,.12)}
@@ -900,6 +901,7 @@ body.view-table .btn-primary{flex:none}
             <span class="calc-value"><span class="unit">₹</span><span id="calcCost">—</span><span class="unit">/km</span></span>
           </div>
         </div>
+        <p class="calc-note">Km/L and cost/km use the previous fill-up's fuel. The amount entered here is used by the next fill-up.</p>
 
         <div class="form-alert" id="formError" role="alert" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.1"/></svg>
@@ -964,7 +966,7 @@ body.view-table .btn-primary{flex:none}
             </header>
 
             <section class="rcpt-items">
-              <div class="items-head" id="itemsHead"><span>Date</span><span>Start km</span><span>End km</span><span>Km</span><span>Km/L</span><span>₹/Km</span><span>Amount</span></div>
+              <div class="items-head" id="itemsHead"><span>Date</span><span>Start km</span><span>End km</span><span>Km</span><span title="Distance divided by the previous fill-up's litres">Km/L</span><span title="Previous fill-up's amount divided by this row's distance">₹/Km</span><span>Amount</span></div>
               <div id="rcptEntries"></div>
             </section>
 
@@ -1086,9 +1088,9 @@ body.view-table .btn-primary{flex:none}
               <th scope="col" class="num">Km</th>
               <th scope="col">Fuel</th>
               <th scope="col" class="num">Price/L</th>
-              <th scope="col" class="num">Litres</th>
-              <th scope="col" class="num">Km/L</th>
-              <th scope="col" class="num">₹/Km</th>
+              <th scope="col" class="num" title="Fuel from the previous fill-up used over this row's distance">Litres</th>
+              <th scope="col" class="num" title="Distance divided by the previous fill-up's litres">Km/L</th>
+              <th scope="col" class="num" title="Previous fill-up's amount divided by this row's distance">₹/Km</th>
               <th scope="col" class="num">Amount</th>
               <th scope="col" class="act"><span class="sr-only">Actions</span></th>
             </tr>
@@ -1100,7 +1102,7 @@ body.view-table .btn-primary{flex:none}
 
       <p class="table-note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.1"/></svg>
-        <span>At the pump, enter today's odometer as Start km and leave End km blank. The next fill-up's Start km closes this entry and works out its Km/L; the newest entry stays <strong>Pending</strong> until then. Type an End km only when you want to override that. Use Older entry to backfill a past fill-up; tap or click any cell to edit it, Enter or tap away saves, Esc cancels.</span>
+        <span>At the pump, enter today's odometer as Start km and leave End km blank. The next fill-up's Start km closes this entry and works out its Km/L; the newest entry stays <strong>Pending</strong> until then. Type an End km only when you want to override that. Each row's Litres, Km/L and Cost/km use the previous fill-up's fuel; Amount is the fuel bought on that row. Use Older entry to backfill a past fill-up; tap or click any cell to edit it, Enter or tap away saves, Esc cancels.</span>
       </p>
     </section>
   </div>
@@ -1111,9 +1113,9 @@ body.view-table .btn-primary{flex:none}
     <span class="foot-dot" aria-hidden="true">·</span>
     <span>Receipt &amp; table share one ledger</span>
     <span class="foot-dot" aria-hidden="true">·</span>
-    <span id="appVersion">v0.0.5</span>
+    <span id="appVersion">v0.0.6</span>
   </footer>
-  <!-- Version rule: bump #appVersion on every commit/push (current: 0.0.5). -->
+  <!-- Version rule: bump #appVersion on every commit/push (current: 0.0.6). -->
 </div>
 
 <input id="importJsonInput" type="file" accept="application/json,.json" hidden>
@@ -1454,7 +1456,23 @@ body.view-table .btn-primary{flex:none}
     return latest;
   }
 
-  function derive(entry, nextStart) {
+  function previousFill(entry) {
+    if (!entry) return null;
+    const amount = Number(entry.amount);
+    const price = Number(entry.price);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(price) || price <= 0) return null;
+    return { amount, price, litres: amount / price };
+  }
+
+  function purchasedLitres(entry) {
+    const amount = Number(entry.amount);
+    const price = Number(entry.price);
+    return Number.isFinite(amount) && amount > 0 && Number.isFinite(price) && price > 0
+      ? amount / price
+      : 0;
+  }
+
+  function derive(entry, nextStart, prevEntry) {
     const explicit = entry.end != null && Number.isFinite(Number(entry.end)) && Number(entry.end) > entry.start
       ? Number(entry.end)
       : null;
@@ -1464,10 +1482,11 @@ body.view-table .btn-primary{flex:none}
     const end = explicit != null ? explicit : chained;
     const pending = end == null;
     const distance = pending ? 0 : end - entry.start;
-    const litres = entry.price > 0 ? entry.amount / entry.price : 0;
-    const mileage = !pending && litres > 0 ? distance / litres : 0;
-    const costPerKm = !pending && distance > 0 ? entry.amount / distance : 0;
-    return { end, pending, distance, litres, mileage, costPerKm };
+    const fuel = previousFill(prevEntry);
+    const litres = fuel ? fuel.litres : 0;
+    const mileage = !pending && fuel ? distance / fuel.litres : 0;
+    const costPerKm = !pending && distance > 0 && fuel ? fuel.amount / distance : 0;
+    return { end, pending, distance, litres, mileage, costPerKm, hasFuel: Boolean(fuel) };
   }
 
   function summarizeEntries(entries) {
@@ -1475,24 +1494,27 @@ body.view-table .btn-primary{flex:none}
       distance: 0,
       litres: 0,
       amount: 0,
+      completedDistance: 0,
       completedLitres: 0,
       completedAmount: 0
     };
 
     entries.forEach((entry, index) => {
+      const previous = entries[index - 1] || null;
       const next = entries[index + 1];
-      const d = derive(entry, next ? next.start : null);
+      const d = derive(entry, next ? next.start : null, previous);
       totals.distance += d.distance;
-      totals.litres += d.litres;
-      totals.amount += entry.amount;
-      if (!d.pending) {
+      totals.litres += purchasedLitres(entry);
+      totals.amount += Number(entry.amount) || 0;
+      if (!d.pending && d.hasFuel) {
+        totals.completedDistance += d.distance;
         totals.completedLitres += d.litres;
-        totals.completedAmount += entry.amount;
+        totals.completedAmount += Number(previous.amount) || 0;
       }
     });
 
-    totals.mileage = totals.completedLitres > 0 ? totals.distance / totals.completedLitres : NaN;
-    totals.costPerKm = totals.distance > 0 ? totals.completedAmount / totals.distance : NaN;
+    totals.mileage = totals.completedLitres > 0 ? totals.completedDistance / totals.completedLitres : NaN;
+    totals.costPerKm = totals.completedDistance > 0 ? totals.completedAmount / totals.completedDistance : NaN;
     return totals;
   }
 
@@ -1631,13 +1653,12 @@ body.view-table .btn-primary{flex:none}
   function updateCalc() {
     const start = readNumber(el.startKm);
     const end = readNumber(el.endKm);
-    const price = readNumber(el.price);
-    const amount = readNumber(el.amount);
+    const vehicleId = getSelectedVehicleId();
+    const fuel = previousFill(vehicleId ? lastEntryFor(vehicleId) : null);
 
     const distance = (Number.isFinite(start) && Number.isFinite(end) && end > start) ? end - start : NaN;
-    const litres = (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) ? amount / price : NaN;
-    const mileage = (Number.isFinite(distance) && Number.isFinite(litres) && litres > 0) ? distance / litres : NaN;
-    const costPerKm = (Number.isFinite(distance) && Number.isFinite(amount)) ? amount / distance : NaN;
+    const mileage = (Number.isFinite(distance) && fuel) ? distance / fuel.litres : NaN;
+    const costPerKm = (Number.isFinite(distance) && distance > 0 && fuel) ? fuel.amount / distance : NaN;
 
     el.calcDistance.textContent = Number.isFinite(distance) ? formatKm(distance) : '—';
     el.calcMileage.textContent = Number.isFinite(mileage) ? amountFmt.format(mileage) : '—';
@@ -1683,21 +1704,24 @@ body.view-table .btn-primary{flex:none}
     resetClearButton();
   }
 
-  function entryMarkup(entry, nextStart) {
+  function entryMarkup(entry, nextStart, prevEntry) {
     const vehicle = getVehicle(entry.vehicleId);
-    const d = derive(entry, nextStart);
+    const d = derive(entry, nextStart, prevEntry);
     const isNew = entry.id === newEntryId ? ' entry--new' : '';
     const name = vehicle ? vehicle.name : 'Vehicle';
     const endText = d.pending ? '<span class="pending-tag">Pending</span>' : formatKm(d.end);
-    const details = `${entry.fuel} · ${formatDate(entry.date)} · ${formatKm(entry.start)} → ${d.pending ? 'pending' : `${formatKm(d.end)} km`} · ${amountFmt.format(d.litres)} L @ ${money(entry.price)}/L`;
+    const fuelNote = d.hasFuel
+      ? `${amountFmt.format(d.litres)} L from previous fill @ ${money(prevEntry.price)}/L`
+      : 'first fill — no previous tank to rate';
+    const details = `${entry.fuel} · ${formatDate(entry.date)} · ${formatKm(entry.start)} → ${d.pending ? 'pending' : `${formatKm(d.end)} km`} · ${fuelNote}`;
 
     return `<article class="entry${isNew}" data-entry-id="${escapeHTML(entry.id)}" title="${escapeHTML(details)}">
       <span class="cell cell-date" data-label="Date">${formatShortDate(entry.date)}</span>
       <span class="cell" data-label="Start km">${formatKm(entry.start)}</span>
       <span class="cell" data-label="End km">${endText}</span>
       <span class="cell" data-label="Km">${d.pending ? '—' : formatKm(d.distance)}</span>
-      <span class="cell entry-mileage" data-label="Km/L">${d.pending ? '—' : amountFmt.format(d.mileage)}</span>
-      <span class="cell" data-label="₹/Km">${d.pending ? '—' : amountFmt.format(d.costPerKm)}</span>
+      <span class="cell entry-mileage" data-label="Km/L">${d.pending || !d.hasFuel ? '—' : amountFmt.format(d.mileage)}</span>
+      <span class="cell" data-label="₹/Km">${d.pending || !d.hasFuel ? '—' : amountFmt.format(d.costPerKm)}</span>
       <span class="cell entry-amount" data-label="Amount">${money(entry.amount)}</span>
       <button class="entry-void" type="button" data-void="${escapeHTML(entry.id)}" aria-label="Void this entry for ${escapeHTML(name)}" title="Void this entry">×</button>
     </article>`;
@@ -1792,7 +1816,7 @@ body.view-table .btn-primary{flex:none}
     } else {
       el.itemsHead.hidden = false;
       el.rcptEntries.innerHTML = entries
-      .map((entry, index) => entryMarkup(entry, entries[index + 1] ? entries[index + 1].start : null))
+      .map((entry, index) => entryMarkup(entry, entries[index + 1] ? entries[index + 1].start : null, entries[index - 1] || null))
       .join('');
       el.rcptSummary.hidden = false;
       el.rcptSummary.innerHTML = summaryMarkup();
@@ -2559,7 +2583,23 @@ body.view-table .btn-primary{flex:none}
     olderDraft = { date: '', start: '', end: '', fuel: 'Petrol', price: '', amount: '' };
   }
 
-  function derive(entry, nextStart) {
+  function previousFill(entry) {
+    if (!entry) return null;
+    const amount = Number(entry.amount);
+    const price = Number(entry.price);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(price) || price <= 0) return null;
+    return { amount, price, litres: amount / price };
+  }
+
+  function purchasedLitres(entry) {
+    const amount = Number(entry.amount);
+    const price = Number(entry.price);
+    return Number.isFinite(amount) && amount > 0 && Number.isFinite(price) && price > 0
+      ? amount / price
+      : 0;
+  }
+
+  function derive(entry, nextStart, prevEntry) {
     const explicit = entry.end != null && Number.isFinite(Number(entry.end)) && Number(entry.end) > entry.start
       ? Number(entry.end)
       : null;
@@ -2569,10 +2609,11 @@ body.view-table .btn-primary{flex:none}
     const end = explicit != null ? explicit : chained;
     const pending = end == null;
     const distance = pending ? 0 : end - entry.start;
-    const litres = entry.price > 0 ? entry.amount / entry.price : 0;
-    const mileage = !pending && litres > 0 ? distance / litres : 0;
-    const costPerKm = !pending && distance > 0 ? entry.amount / distance : 0;
-    return { end, pending, distance, litres, mileage, costPerKm };
+    const fuel = previousFill(prevEntry);
+    const litres = fuel ? fuel.litres : 0;
+    const mileage = !pending && fuel ? distance / fuel.litres : 0;
+    const costPerKm = !pending && distance > 0 && fuel ? fuel.amount / distance : 0;
+    return { end, pending, distance, litres, mileage, costPerKm, hasFuel: Boolean(fuel) };
   }
 
   function summarizeEntries(entries) {
@@ -2580,45 +2621,87 @@ body.view-table .btn-primary{flex:none}
       distance: 0,
       litres: 0,
       amount: 0,
+      completedDistance: 0,
       completedLitres: 0,
       completedAmount: 0
     };
 
     entries.forEach((entry, index) => {
+      const previous = entries[index - 1] || null;
       const next = entries[index + 1];
-      const d = derive(entry, next ? next.start : null);
+      const d = derive(entry, next ? next.start : null, previous);
       totals.distance += d.distance;
-      totals.litres += d.litres;
-      totals.amount += entry.amount;
-      if (!d.pending) {
+      totals.litres += purchasedLitres(entry);
+      totals.amount += Number(entry.amount) || 0;
+      if (!d.pending && d.hasFuel) {
+        totals.completedDistance += d.distance;
         totals.completedLitres += d.litres;
-        totals.completedAmount += entry.amount;
+        totals.completedAmount += Number(previous.amount) || 0;
       }
     });
 
-    totals.mileage = totals.completedLitres > 0 ? totals.distance / totals.completedLitres : NaN;
-    totals.costPerKm = totals.distance > 0 ? totals.completedAmount / totals.distance : NaN;
+    totals.mileage = totals.completedLitres > 0 ? totals.completedDistance / totals.completedLitres : NaN;
+    totals.costPerKm = totals.completedDistance > 0 ? totals.completedAmount / totals.completedDistance : NaN;
     return totals;
   }
 
-  function nextStartFor(entry) {
+  function previousEntryFor(entry) {
     const own = state.entries
       .filter((item) => item.vehicleId === entry.vehicleId)
       .sort(compareEntries);
     const index = own.findIndex((item) => item.id === entry.id);
-    return index >= 0 && own[index + 1] ? own[index + 1].start : null;
+    return index > 0 ? own[index - 1] : null;
   }
 
-  function calcValues(startRaw, endRaw, priceRaw, amountRaw) {
+  function nextEntryFor(entry) {
+    const own = state.entries
+      .filter((item) => item.vehicleId === entry.vehicleId)
+      .sort(compareEntries);
+    const index = own.findIndex((item) => item.id === entry.id);
+    return index >= 0 && own[index + 1] ? own[index + 1] : null;
+  }
+
+  function nextStartFor(entry) {
+    const next = nextEntryFor(entry);
+    return next ? next.start : null;
+  }
+
+  function calcValues(startRaw, endRaw, prevEntry, nextStart = null) {
     const start = parseInput(startRaw);
-    const end = parseInput(endRaw);
-    const price = parseInput(priceRaw);
-    const amount = parseInput(amountRaw);
+    const rawEnd = parseInput(endRaw);
+    const chainedEnd = Number(nextStart);
+    const end = (Number.isFinite(rawEnd) && rawEnd > start)
+      ? rawEnd
+      : (Number.isFinite(chainedEnd) && chainedEnd > start ? chainedEnd : NaN);
     const distance = (Number.isFinite(start) && Number.isFinite(end) && end > start) ? end - start : NaN;
-    const litres = (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) ? amount / price : NaN;
-    const mileage = (Number.isFinite(distance) && Number.isFinite(litres) && litres > 0) ? distance / litres : NaN;
-    const costPerKm = (Number.isFinite(distance) && distance > 0 && Number.isFinite(amount) && amount > 0) ? amount / distance : NaN;
+    const fuel = previousFill(prevEntry);
+    const litres = fuel ? fuel.litres : NaN;
+    const mileage = (Number.isFinite(distance) && fuel) ? distance / fuel.litres : NaN;
+    const costPerKm = (Number.isFinite(distance) && distance > 0 && fuel) ? fuel.amount / distance : NaN;
     return { distance, litres, mileage, costPerKm };
+  }
+
+  function draftNeighbors(draft) {
+    const own = currentEntries();
+    if (own.length === 0) return { previous: null, nextStart: null };
+
+    const date = parseDateInput(draft.date);
+    const start = parseInput(draft.start);
+    if (!date || !Number.isFinite(start)) {
+      return { previous: own[own.length - 1], nextStart: null };
+    }
+
+    const candidate = { date, start, createdAt: new Date().toISOString() };
+    let previous = null;
+    let next = null;
+    for (const entry of own) {
+      if (compareEntries(entry, candidate) < 0) previous = entry;
+      else {
+        next = entry;
+        break;
+      }
+    }
+    return { previous, nextStart: next ? next.start : null };
   }
 
   function renderVehicleSelect() {
@@ -2789,8 +2872,8 @@ body.view-table .btn-primary{flex:none}
     return `<td class="${cls}" data-cell="${key}" data-label="${field}" tabindex="0" role="button" title="${escapeHTML(title)}" aria-label="${escapeHTML(aria)}">${content}</td>`;
   }
 
-  function displayRowMarkup(entry, nextStart) {
-    const d = derive(entry, nextStart);
+  function displayRowMarkup(entry, nextStart, prevEntry) {
+    const d = derive(entry, nextStart, prevEntry);
     const editingKey = editingCell && editingCell.id === entry.id ? editingCell.key : '';
     return `<tr data-entry-id="${escapeHTML(entry.id)}">
       ${cellTdMarkup(entry, 'date', editingKey === 'date', nextStart)}
@@ -2799,9 +2882,9 @@ body.view-table .btn-primary{flex:none}
       <td class="num" data-out="distance" data-label="Distance">${d.pending ? '—' : formatKm(d.distance)}</td>
       ${cellTdMarkup(entry, 'fuel', editingKey === 'fuel', nextStart)}
       ${cellTdMarkup(entry, 'price', editingKey === 'price', nextStart)}
-      <td class="num" data-out="litres" data-label="Litres">${amountFmt.format(d.litres)}</td>
-      <td class="num mileage" data-out="mileage" data-label="Mileage">${d.pending ? '—' : amountFmt.format(d.mileage)}</td>
-      <td class="num" data-out="cost" data-label="Cost / km">${d.pending ? '—' : amountFmt.format(d.costPerKm)}</td>
+      <td class="num" data-out="litres" data-label="Litres" title="Fuel from the previous fill-up">${d.hasFuel ? amountFmt.format(d.litres) : '—'}</td>
+      <td class="num mileage" data-out="mileage" data-label="Mileage" title="Distance divided by the previous fill-up's litres">${d.pending || !d.hasFuel ? '—' : amountFmt.format(d.mileage)}</td>
+      <td class="num" data-out="cost" data-label="Cost / km" title="Previous fill-up's amount divided by this row's distance">${d.pending || !d.hasFuel ? '—' : amountFmt.format(d.costPerKm)}</td>
       ${cellTdMarkup(entry, 'amount', editingKey === 'amount', nextStart)}
       <td class="act" data-label="Actions">${rowActions()}</td>
     </tr>`;
@@ -2904,7 +2987,7 @@ body.view-table .btn-primary{flex:none}
   }
 
   function closeDraftEditor(td, { refocus = false, auto = true } = {}) {
-    if (!td || !td.isConnected) return;
+    if (!td || !td.isConnected || td.dataset.draftClosing === '1') return;
     const kind = td.dataset.draftKind;
     const key = td.dataset.draftEditor;
     const draft = kind === 'add' ? addDraft : olderDraft;
@@ -2920,7 +3003,13 @@ body.view-table .btn-primary{flex:none}
     }
     if (kind === 'add') persistDraft();
     const row = td.closest('tr');
-    td.outerHTML = draftDisplayCellMarkup(kind, key, draft[key]);
+    td.dataset.draftClosing = '1';
+    try {
+      td.outerHTML = draftDisplayCellMarkup(kind, key, draft[key]);
+    } catch {
+      td.removeAttribute('data-draft-closing');
+      return;
+    }
     if (auto && kind === 'add' && autoAddIfComplete()) return;
     if (refocus && row) {
       const display = row.querySelector(`[data-draft-display="${key}"]`);
@@ -3014,7 +3103,7 @@ body.view-table .btn-primary{flex:none}
       rows += olderRowMarkup();
     }
     rows += entries
-      .map((entry, index) => displayRowMarkup(entry, entries[index + 1] ? entries[index + 1].start : null))
+      .map((entry, index) => displayRowMarkup(entry, entries[index + 1] ? entries[index + 1].start : null, entries[index - 1] || null))
       .join('');
     rows += addRowMarkup();
     el.entriesBody.innerHTML = rows;
@@ -3068,11 +3157,13 @@ body.view-table .btn-primary{flex:none}
   }
 
   function updateRowCalc(row) {
+    const draft = row.id === 'addRow' ? addDraft : olderDraft;
+    const { previous, nextStart } = draftNeighbors(draft);
     const values = calcValues(
       rowValue(row, 'start'),
       rowValue(row, 'end'),
-      rowValue(row, 'price'),
-      rowValue(row, 'amount')
+      previous,
+      nextStart
     );
     setOut(row, 'distance', Number.isFinite(values.distance) ? formatKm(values.distance) : '—');
     setOut(row, 'litres', Number.isFinite(values.litres) ? amountFmt.format(values.litres) : '—');
@@ -3181,12 +3272,12 @@ body.view-table .btn-primary{flex:none}
     revealEditorOnMobile(editor);
   }
 
-  function updateComputedCells(row, entry, nextStart) {
-    const d = derive(entry, nextStart);
+  function updateComputedCells(row, entry, nextStart, prevEntry) {
+    const d = derive(entry, nextStart, prevEntry);
     setOut(row, 'distance', d.pending ? '—' : formatKm(d.distance));
-    setOut(row, 'litres', amountFmt.format(d.litres));
-    setOut(row, 'mileage', d.pending ? '—' : amountFmt.format(d.mileage));
-    setOut(row, 'cost', d.pending ? '—' : amountFmt.format(d.costPerKm));
+    setOut(row, 'litres', d.hasFuel ? amountFmt.format(d.litres) : '—');
+    setOut(row, 'mileage', d.pending || !d.hasFuel ? '—' : amountFmt.format(d.mileage));
+    setOut(row, 'cost', d.pending || !d.hasFuel ? '—' : amountFmt.format(d.costPerKm));
   }
 
   function refreshSummary() {
@@ -3209,8 +3300,16 @@ body.view-table .btn-primary{flex:none}
       return;
     }
     const nextStart = nextStartFor(entry);
+    const previous = previousEntryFor(entry);
     td.outerHTML = cellTdMarkup(entry, key, false, nextStart);
-    updateComputedCells(row, entry, nextStart);
+    updateComputedCells(row, entry, nextStart, previous);
+
+    const nextEntry = nextEntryFor(entry);
+    if (nextEntry) {
+      const nextRow = $$('tr[data-entry-id]', el.entriesBody).find((tr) => tr.dataset.entryId === nextEntry.id);
+      if (nextRow) updateComputedCells(nextRow, nextEntry, nextStartFor(nextEntry), entry);
+    }
+
     refreshSummary();
     if (refocus) {
       const next = row.querySelector(`td[data-cell="${key}"]`);
