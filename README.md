@@ -9,7 +9,7 @@ Both views share the same ledger. Each vehicle keeps its own odometer continuity
 
 Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no build step.
 
-**Version:** `0.0.6` (shown in the page footer). Bump the footer `#appVersion` on every commit/push.
+**Version:** `0.0.7` (shown in the page footer). Bump the footer `#appVersion` on every commit/push.
 
 ## Features
 
@@ -21,6 +21,7 @@ Built using **DeepSeek V4.1 Flash in OpenCode**. No framework, no bundler, no bu
 - Calculated distance, mileage (km/L), and cost per km; still-open entries show **Pending** and a muted `—` until the next fill-up closes them.
 - Mileage uses the **previous fill-up's litres and amount** for each row, matching the fuel that was actually burned over that distance. The first row shows its distance but no mileage or cost/km because there is no previous fill to attribute.
 - JSON export/import with confirmation and Undo. Import replaces the ledger and syncs the replacement to D1.
+- Clearing a vehicle receipt is undoable from the toast, and a browser with no entries cannot overwrite a populated D1 ledger on boot.
 - Mobile card layouts, 16px inputs, larger touch targets, and editors scrolled into view.
 - Optional D1 sync with a live status pill in the masthead (`Checking`, `Saving`, `D1 synced`, `D1 offline`, `Local only`).
 
@@ -159,7 +160,7 @@ Pages project → **Custom domains** → **Set up a domain**, then add the DNS r
 - Writes are debounced by ~0.5s, then PUT to `/api/ledger`. D1 is the shared copy; `localStorage` remains the offline cache.
 - The browser checks for newer D1 versions on page load, on focus/wake, and every 20 seconds. It never pulls while you are editing a cell.
 - If a save fails, the pill shows **D1 offline** and the local change is marked dirty. It is retried every 15 seconds and again on the next page load, so an offline edit is not silently replaced by an older D1 copy.
-- A blank D1 ledger never overwrites a populated local ledger; the local copy is uploaded instead. This makes linking D1 after using the site safe.
+- A blank D1 ledger never overwrites a populated local ledger; the local copy is uploaded instead. This makes linking D1 after using the site safe. On boot, a local ledger with **no entries** also never replaces a D1 ledger that still has entries, so a cleared or fresh browser cannot erase the shared copy.
 - Across devices the last successful write wins. Take an **Export** before importing a backup or making a large batch of changes.
 - The first visit to a brand-new Pages project uploads the browser's existing ledger. On a second browser, an existing D1 ledger takes precedence over that browser's local copy — export first if both copies matter.
 - If the first check fails because the network is down, the pill shows **Local only** for that moment; focusing the page or coming back online retries the check, and edits made meanwhile stay marked for upload.

@@ -450,13 +450,19 @@
     mode = 'd1';
 
     const remoteEmpty = !body.data.vehicles.length && !body.data.entries.length;
+    const remoteHasEntries = body.data.entries.length > 0;
     const localHasData = Boolean(
       localData && (localData.vehicles.length || localData.entries.length)
     );
+    const localHasEntries = Boolean(localData && localData.entries.length);
 
     // Never overwrite edits that failed to upload from a previous session,
     // and never let a blank D1 row wipe a populated local ledger.
-    if (localData && (localDirty || (remoteEmpty && localHasData))) {
+    // Also never let a local ledger with no entries replace a D1 ledger that
+    // still has entries: that is the signature of a cleared browser, not an
+    // intentional delete (those sync immediately while the page is open).
+    const mayReplaceRemote = !remoteHasEntries || localHasEntries;
+    if (localData && mayReplaceRemote && (localDirty || (remoteEmpty && localHasData))) {
       setStatus(
         'saving',
         'Saving',

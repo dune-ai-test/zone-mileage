@@ -1113,9 +1113,9 @@ body.view-table .btn-primary{flex:none}
     <span class="foot-dot" aria-hidden="true">·</span>
     <span>Receipt &amp; table share one ledger</span>
     <span class="foot-dot" aria-hidden="true">·</span>
-    <span id="appVersion">v0.0.6</span>
+    <span id="appVersion">v0.0.7</span>
   </footer>
-  <!-- Version rule: bump #appVersion on every commit/push (current: 0.0.6). -->
+  <!-- Version rule: bump #appVersion on every commit/push (current: 0.0.7). -->
 </div>
 
 <input id="importJsonInput" type="file" accept="application/json,.json" hidden>
@@ -2037,6 +2037,9 @@ body.view-table .btn-primary{flex:none}
 
     clearTimeout(clearTimer);
     clearArmed = false;
+    const removed = currentEntries();
+    const previousReceiptNo = vehicle.receiptNo;
+    const previousIssuedAt = vehicle.issuedAt;
     state.entries = state.entries.filter((entry) => entry.vehicleId !== vehicle.id);
     vehicle.receiptNo = generateReceiptNo();
     vehicle.issuedAt = new Date().toISOString();
@@ -2044,7 +2047,22 @@ body.view-table .btn-primary{flex:none}
     renderReceipt();
     updateVehicleMeta();
     updateStartHelp();
-    toast(`${vehicle.name} receipt cleared. Other vehicles were kept.`);
+    toast(
+      `${vehicle.name} receipt cleared — ${removed.length} ${removed.length === 1 ? 'fill-up' : 'fill-ups'} removed.`,
+      'Undo',
+      () => {
+        const existing = new Set(state.entries.map((entry) => entry.id));
+        const restored = removed.filter((entry) => !existing.has(entry.id));
+        state.entries.push(...restored);
+        vehicle.receiptNo = previousReceiptNo;
+        vehicle.issuedAt = previousIssuedAt;
+        persist();
+        renderReceipt();
+        updateVehicleMeta();
+        updateStartHelp();
+        toast('Receipt restored.');
+      }
+    );
   }
 
   function hideToast() {
